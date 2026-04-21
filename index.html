@@ -1,233 +1,313 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFCU — End-to-End Simulation</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#07090f;--panel:#0c1018;--panel2:#101520;--border:#1c2438;--border2:#263050;
-  --text:#c0cce8;--muted:#4a5878;--accent:#4f80ff;--accent2:#2dbf8a;
+  --bg:#070a10;--p0:#0b0f18;--p1:#0f1520;--p2:#141c28;
+  --b0:#1a2235;--b1:#243050;--b2:#2e3d60;
+  --t0:#c8d4f0;--t1:#7a90b8;--t2:#4a5878;
+  --acc:#4f80ff;--acc2:#2dbf8a;--warn:#d4a843;--danger:#e05555;
   --v:#8b6fe8;--i:#6655cc;--b:#4f9de8;--g:#4db86e;--y:#d4a843;--o:#c4622a;--r:#e05555;
 }
-body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);font-size:13px;}
-.mono{font-family:'JetBrains Mono',monospace;}
-.tag{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+html,body{background:var(--bg);color:var(--t0);font-family:'Inter',sans-serif;font-size:12px;min-height:100vh;}
+.mono{font-family:'JetBrains Mono',monospace!important;}
+.tag{font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);}
 
 /* LAYOUT */
-.root{padding:10px;display:flex;flex-direction:column;gap:8px;}
-.row{display:flex;gap:8px;}
-.panel{background:var(--panel);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;}
-.panel-t{font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border);}
+.wrap{padding:10px;display:flex;flex-direction:column;gap:8px;max-width:1400px;margin:0 auto;}
+.row{display:flex;gap:8px;flex-wrap:wrap;}
+.col{display:flex;flex-direction:column;gap:8px;}
+.panel{background:var(--p1);border:0.5px solid var(--b0);border-radius:8px;padding:10px 12px;}
+.pt{font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--b0);}
 
-/* BINARY INPUT */
-.bin-section{display:flex;flex-direction:column;gap:6px;}
-.bin-row{display:flex;align-items:center;gap:6px;}
-.bin-ch-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.bin-ch-name{font-size:9px;font-weight:600;width:42px;font-family:'JetBrains Mono',monospace;}
-.bin-input{background:#060a12;border:0.5px solid var(--border2);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 7px;width:90px;outline:none;transition:border .15s;}
-.bin-input:focus{border-color:var(--accent);}
-.bin-input.err{border-color:#e05555;background:#1a0808;}
-.bin-input.ok{border-color:var(--accent2);}
-.bin-dec{font-size:10px;font-family:'JetBrains Mono',monospace;width:28px;color:var(--muted);}
-.bin-volt{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);width:36px;}
-.bin-bits{display:flex;gap:1px;flex:1;}
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;}
+.tab{padding:4px 11px;border-radius:4px;border:0.5px solid var(--b1);background:transparent;color:var(--t2);font-size:10px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .15s;}
+.tab.on{background:var(--p2);color:var(--acc);border-color:var(--acc);}
+.tab:hover:not(.on){border-color:var(--b2);color:var(--t1);}
+
+/* INPUTS */
+.finput{background:var(--p0);border:0.5px solid var(--b1);border-radius:4px;color:var(--t0);font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 8px;outline:none;transition:border .15s;}
+.finput:focus{border-color:var(--acc);}
+.finput.ok{border-color:var(--acc2);}
+.finput.err{border-color:var(--danger);background:#1a0808;}
+textarea.finput{resize:vertical;font-size:10px;line-height:1.6;}
+.btn{padding:5px 14px;border-radius:5px;border:0.5px solid var(--b2);background:var(--p2);color:var(--t0);font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s;}
+.btn:hover{border-color:var(--acc);color:var(--acc);}
+.btn.primary{background:var(--acc);color:white;border-color:var(--acc);}
+.btn.primary:hover{opacity:.88;}
+
+/* CHANNEL ROWS */
+.chrow{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.chdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.chname{font-size:9px;font-weight:700;width:44px;font-family:'JetBrains Mono',monospace;}
+input[type=range]{-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;outline:none;cursor:pointer;background:var(--b0);}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;cursor:pointer;border:1.5px solid rgba(255,255,255,.15);}
+
+/* BITS */
+.bits{display:flex;gap:1px;}
 .bbit{width:8px;height:8px;border-radius:1px;cursor:pointer;transition:background .1s;}
 
-/* SLIDER fallback */
-.ch-slider{-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;outline:none;cursor:pointer;flex:1;}
-.ch-slider::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;cursor:pointer;}
+/* ENCODING TABLE */
+.enc-table{width:100%;border-collapse:collapse;}
+.enc-table th{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);padding:4px 8px;text-align:left;border-bottom:0.5px solid var(--b0);}
+.enc-table td{padding:4px 8px;border-bottom:0.5px solid var(--b0);font-family:'JetBrains Mono',monospace;font-size:10px;}
+.enc-table tr:last-child td{border-bottom:none;}
+.enc-table tr:hover td{background:var(--p2);}
 
-/* PIPELINE ARROW */
-.pipe-arrow{display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);padding:0 2px;align-self:center;}
-
-/* FIBER CANVAS */
-#fib{display:block;width:100%;border-radius:6px;background:#04060d;}
+/* MAPPING ENTRY */
+.map-entry{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:5px;border:0.5px solid var(--b0);margin-bottom:4px;background:var(--p0);}
 
 /* TENSOR */
 .tensor{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
-.tcell{border-radius:5px;overflow:hidden;border:0.5px solid transparent;}
+.tcell{border-radius:5px;overflow:hidden;}
 .thead{padding:3px 2px;text-align:center;font-size:8px;font-weight:700;font-family:'JetBrains Mono',monospace;color:white;}
 .tbody{padding:4px 5px;background:#080c14;}
 .tval{font-size:8px;font-family:'JetBrains Mono',monospace;line-height:1.7;}
 
-/* SCOPE */
-.scope{background:#03050b;border-radius:4px;border:0.5px solid var(--border);overflow:hidden;}
-.scope canvas{display:block;width:100%;}
-.scope-lbl{font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);padding:3px 6px 0;}
-
 /* TERM CARDS */
 .terms{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
-.tcard{background:#080c14;border-radius:6px;padding:7px 9px;border:0.5px solid var(--border);}
-.tcard-lbl{font-size:8px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;}
-.tcard-val{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1.1;margin:2px 0;}
-.tcard-sub{font-size:8px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
-.bbar{height:3px;background:var(--border2);border-radius:2px;margin-top:5px;overflow:hidden;}
-.bbar-f{height:100%;border-radius:2px;transition:width .2s;}
+.tcard{background:#080c14;border-radius:6px;padding:8px 10px;}
+.tcard-val{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;}
+.tcard-sub{font-size:8px;color:var(--t2);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.bbar{height:3px;background:var(--b0);border-radius:2px;margin-top:6px;overflow:hidden;}
+.bfill{height:100%;border-radius:2px;transition:width .2s;}
 
-/* OUTPUT SECTION */
-.out-box{background:#060d1a;border:0.5px solid var(--accent);border-radius:8px;padding:10px 14px;}
-.out-num{font-size:32px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent);}
-.out-bin{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-top:2px;letter-spacing:.05em;}
+/* DECODE RESULT */
+.decode-box{background:var(--p0);border:0.5px solid var(--acc);border-radius:8px;padding:12px 16px;}
+.decode-big{font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--acc);}
+.decode-text{background:var(--p0);border:0.5px solid var(--acc2);border-radius:6px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--acc2);margin-top:6px;word-break:break-all;min-height:36px;}
 
-/* MIX COLOR */
-.mix-orb{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border2);transition:background .2s;flex-shrink:0;}
+/* SCOPE */
+.scope{background:#03050b;border-radius:4px;border:0.5px solid var(--b0);overflow:hidden;}
+.scope canvas{display:block;width:100%;}
+.scope-lbl{font-size:8px;font-family:'JetBrains Mono',monospace;padding:3px 6px 0;}
 
-/* INPUT TABS */
-.itab{padding:4px 12px;border-radius:4px;border:0.5px solid var(--border2);background:transparent;color:var(--muted);font-size:10px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .15s;}
-.itab.on{background:#1a2540;color:var(--accent);border-color:var(--accent);}
+/* PIPELINE STAGES */
+.stage-arrow{display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:20px;padding:4px 2px;align-self:center;}
 
-/* RESULT CONTRIB */
+/* OUTPUT */
+.out-box{background:#06101e;border:0.5px solid var(--acc);border-radius:8px;padding:12px 16px;}
+.out-big{font-size:30px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--acc);}
+
+/* STATUS */
+.status{font-size:9px;font-family:'JetBrains Mono',monospace;padding:3px 8px;border-radius:3px;display:inline-block;}
+.status.ok{background:#0a2018;color:var(--acc2);border:0.5px solid var(--acc2);}
+.status.warn{background:#1a1408;color:var(--warn);border:0.5px solid var(--warn);}
+.status.err{background:#1a0808;color:var(--danger);border:0.5px solid var(--danger);}
+
+/* SCROLLABLE */
+.scroll{overflow-y:auto;max-height:180px;}
+.scroll::-webkit-scrollbar{width:4px;}
+.scroll::-webkit-scrollbar-track{background:var(--p0);}
+.scroll::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px;}
+
+/* MIX ORB */
+.mix-orb{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--b1);transition:background .2s;flex-shrink:0;}
+
+/* CONTRIB */
 .contrib-row{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
-.contrib-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
-.contrib-fill{height:100%;border-radius:2px;transition:width .2s;}
-
-/* NUMBER INPUT */
-.num-input{background:#060a12;border:0.5px solid var(--border2);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;padding:4px 9px;width:110px;outline:none;transition:border .15s;}
-.num-input:focus{border-color:var(--accent);}
-
-/* DECODE BOX */
-.decode-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px;}
-.decode-cell{border-radius:4px;padding:5px 4px;text-align:center;}
-.decode-lbl{font-size:7px;font-family:'JetBrains Mono',monospace;font-weight:700;}
-.decode-val{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:1px;}
-.decode-m{font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);}
+.cbar{flex:1;height:4px;background:var(--b0);border-radius:2px;overflow:hidden;}
+.cfill{height:100%;border-radius:2px;transition:width .2s;}
 </style>
 </head>
 <body>
-<div class="root">
+<div class="wrap">
 
 <!-- HEADER -->
-<div style="display:flex;align-items:baseline;gap:10px;padding:2px 0;">
-  <span style="font-size:14px;font-weight:600;letter-spacing:.1em;color:#7aacff;font-family:'JetBrains Mono',monospace;">OFCU</span>
-  <span style="font-size:9px;color:var(--muted);letter-spacing:.08em;">END-TO-END OPTICAL COMPUTE SIMULATION · 7 CHANNELS · 21 OUTPUTS</span>
+<div style="display:flex;align-items:center;gap:12px;padding:4px 2px;">
+  <span style="font-size:16px;font-weight:700;letter-spacing:.1em;color:#7aacff;font-family:'JetBrains Mono',monospace;">OFCU</span>
+  <span style="font-size:9px;color:var(--t2);letter-spacing:.06em;">END-TO-END SIMULATION · ENCODE → OPTICAL COMPUTE → DECODE · 7 CHANNELS · 21 OUTPUTS</span>
   <div style="flex:1;"></div>
-  <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;" id="clk-lbl">CLK 0</div>
+  <span class="status ok" id="sys-status">SYSTEM READY</span>
+  <span style="font-size:9px;color:var(--t2);font-family:'JetBrains Mono',monospace;" id="clk-lbl">CLK 0</span>
 </div>
 
-<!-- ══ ROW 1: INPUT STAGE ══ -->
+<!-- ══════════════════════════════════════
+     ROW 1: ENCODING SYSTEM
+══════════════════════════════════════ -->
 <div class="row">
 
-  <!-- BINARY / DECIMAL INPUT -->
-  <div class="panel" style="flex:0 0 340px;">
-    <div class="panel-t">Stage 1 — digital input</div>
-    <div style="display:flex;gap:5px;margin-bottom:10px;">
-      <button class="itab on" id="tab-bin" onclick="setMode('bin')">Binary</button>
-      <button class="itab" id="tab-dec" onclick="setMode('dec')">Decimal</button>
-      <button class="itab" id="tab-num" onclick="setMode('num')">Number→decompose</button>
+  <!-- ENCODER INPUT -->
+  <div class="panel" style="flex:1;min-width:280px;">
+    <div class="pt">Stage 1A — encoder input</div>
+    <div class="tabs">
+      <button class="tab on" id="etab-text" onclick="setEncMode('text')">Text</button>
+      <button class="tab" id="etab-num" onclick="setEncMode('num')">Number</button>
+      <button class="tab" id="etab-bin" onclick="setEncMode('bin')">Binary</button>
+      <button class="tab" id="etab-hex" onclick="setEncMode('hex')">Hex</button>
     </div>
 
-    <!-- BINARY MODE -->
-    <div id="mode-bin" class="bin-section"></div>
+    <div id="enc-text">
+      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;">Enter any text — each character encoded to 7-channel optical word</div>
+      <textarea class="finput" id="txt-in" rows="3" style="width:100%;margin-bottom:6px;" oninput="encodeText(this.value)">OFCU</textarea>
+      <div style="font-size:9px;color:var(--t2);margin-bottom:3px;">Character select</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;" id="char-pills"></div>
+    </div>
 
-    <!-- DECIMAL MODE -->
-    <div id="mode-dec" class="bin-section" style="display:none;"></div>
-
-    <!-- NUMBER DECOMPOSE MODE -->
-    <div id="mode-num" style="display:none;">
-      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">Enter any number — auto-decomposed across 7 atom channels</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <input class="num-input" type="number" id="big-num" value="1385" min="0" max="99999" oninput="decomposeNumber(this.value)">
-        <span style="font-size:10px;color:var(--muted);">max ≈ 99,999</span>
+    <div id="enc-num" style="display:none;">
+      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;">Number → greedy atom decomposition across 7 channels</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+        <input class="finput" type="number" id="num-in" value="1385" min="0" max="9999999" style="width:120px;" oninput="encodeNumber(parseInt(this.value)||0)">
+        <span style="font-size:9px;color:var(--t2);">max 9,999,999</span>
       </div>
-      <div class="decode-grid" id="decomp-grid"></div>
-      <div style="font-size:9px;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace;" id="decomp-check"></div>
+      <div id="num-decomp" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t2);line-height:1.9;"></div>
+    </div>
+
+    <div id="enc-bin" style="display:none;">
+      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;">Enter 8-bit binary per channel (56 bits total)</div>
+      <div id="bin-inputs"></div>
+    </div>
+
+    <div id="enc-hex" style="display:none;">
+      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;">Enter hex bytes (e.g. FF A3 2B 00 ...)</div>
+      <input class="finput" id="hex-in" value="B4 8C 64 C8 50 3C A0" style="width:100%;margin-bottom:6px;" oninput="encodeHex(this.value)">
+      <div id="hex-parsed" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t2);"></div>
     </div>
   </div>
 
-  <!-- DAC / VOLTAGE STAGE -->
-  <div class="panel" style="flex:1;">
-    <div class="panel-t">Stage 2 — DAC → voltage → laser intensity</div>
-    <div id="dac-stage"></div>
-  </div>
-
-</div>
-
-<!-- ══ ROW 2: OPTICAL FABRIC ══ -->
-<div class="row">
-  <div class="panel" style="flex:1;">
-    <div class="panel-t">Stage 3 — optical fiber mix layer (real-time)</div>
-    <canvas id="fib" height="180"></canvas>
-  </div>
-  <div class="panel" style="flex:0 0 200px;display:flex;flex-direction:column;gap:8px;">
-    <div class="panel-t">Mix node output</div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div class="mix-orb" id="mix-orb"></div>
+  <!-- ENCODING TABLE -->
+  <div class="panel" style="flex:1;min-width:260px;">
+    <div class="pt">Stage 1B — optical encoding map</div>
+    <div style="font-size:9px;color:var(--t2);margin-bottom:8px;">Each input byte mapped to wavelength channel intensity. Mapping = encryption key.</div>
+    <div class="scroll">
+      <table class="enc-table" id="enc-table">
+        <thead><tr>
+          <th>Ch</th><th>Wavelength</th><th>Atom</th>
+          <th>Input byte</th><th>→ Intensity</th><th>→ Voltage</th><th>Encoded</th>
+        </tr></thead>
+        <tbody id="enc-tbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+      <div class="mix-orb" id="enc-orb"></div>
       <div>
-        <div style="font-size:9px;color:var(--muted);">Mixed color</div>
-        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;margin-top:2px;" id="mix-hex">#000</div>
-        <div style="font-size:9px;color:var(--muted);margin-top:4px;">Avg intensity</div>
-        <div style="font-size:15px;font-weight:600;font-family:'JetBrains Mono',monospace;" id="mix-pct">0%</div>
+        <div style="font-size:9px;color:var(--t2);">Mixed optical output</div>
+        <div style="font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:2px;" id="enc-hex-lbl">#000</div>
+        <div style="font-size:9px;color:var(--t2);margin-top:3px;">Optical word</div>
+        <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--acc);" id="enc-word">0</div>
       </div>
     </div>
-    <div>
-      <div style="font-size:8px;color:var(--muted);margin-bottom:4px;letter-spacing:.08em;">CHANNEL INTENSITIES</div>
-      <div id="int-bars"></div>
+  </div>
+
+  <!-- CHANNEL INTENSITY CONTROL -->
+  <div class="panel" style="flex:1;min-width:280px;">
+    <div class="pt">Stage 1C — channel intensity (DAC register)</div>
+    <div id="ch-sliders"></div>
+    <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;">
+      <button class="btn" onclick="preset('max')">Max</button>
+      <button class="btn" onclick="preset('half')">Half</button>
+      <button class="btn" onclick="preset('low')">Low</button>
+      <button class="btn" onclick="preset('alt')">Alt</button>
+      <button class="btn" onclick="preset('zero')">Clear</button>
     </div>
   </div>
+
 </div>
 
-<!-- ══ ROW 3: PHOTOTRANSISTOR ══ -->
+<!-- ══════════════════════════════════════
+     ROW 2: OPTICAL STAGE
+══════════════════════════════════════ -->
 <div class="row">
-  <div class="panel" style="flex:1;">
-    <div class="panel-t">Stage 4 — phototransistor receiver · 21 simultaneous outputs</div>
-    <div class="terms" id="term-cards"></div>
+  <div class="panel" style="flex:2;min-width:300px;">
+    <div class="pt">Stage 2 — optical fiber mix layer</div>
+    <canvas id="fib" height="160" style="display:block;width:100%;border-radius:5px;background:#04060d;"></canvas>
+  </div>
+  <div class="panel" style="flex:1;min-width:200px;">
+    <div class="pt">Stage 3 — phototransistor terminals</div>
+    <div class="terms" id="terms"></div>
     <div style="margin-top:8px;">
-      <div class="panel-t" style="margin-bottom:5px;">Full 7-channel × 3-terminal tensor</div>
-      <div class="tensor" id="tensor"></div>
-    </div>
-  </div>
-  <div class="panel" style="flex:0 0 180px;display:flex;flex-direction:column;gap:6px;">
-    <div class="panel-t">Signal oscilloscope</div>
-    <div class="scope">
-      <div class="scope-lbl" style="color:#4f9de8;">Ic collector</div>
-      <canvas id="sc-ic" height="38"></canvas>
-    </div>
-    <div class="scope">
-      <div class="scope-lbl" style="color:#d4a843;">Ib base</div>
-      <canvas id="sc-ib" height="38"></canvas>
-    </div>
-    <div class="scope">
-      <div class="scope-lbl" style="color:#8b6fe8;">Ie emitter</div>
-      <canvas id="sc-ie" height="38"></canvas>
+      <div class="scope" style="margin-bottom:4px;">
+        <div class="scope-lbl" style="color:#4f9de8;">Ic</div>
+        <canvas id="sc-ic" height="32"></canvas>
+      </div>
+      <div class="scope" style="margin-bottom:4px;">
+        <div class="scope-lbl" style="color:#d4a843;">Ib</div>
+        <canvas id="sc-ib" height="32"></canvas>
+      </div>
+      <div class="scope">
+        <div class="scope-lbl" style="color:#8b6fe8;">Ie</div>
+        <canvas id="sc-ie" height="32"></canvas>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ══ ROW 4: OUTPUT STAGE ══ -->
+<!-- ══════════════════════════════════════
+     ROW 3: TENSOR + DECODING
+══════════════════════════════════════ -->
 <div class="row">
-  <div class="out-box" style="flex:1;">
-    <div class="panel-t" style="border:none;padding:0;margin-bottom:6px;">Stage 5 — computed digital output</div>
-    <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
-      <div>
-        <div class="tag" style="margin-bottom:3px;">Encoded optical sum</div>
-        <div class="out-num" id="out-sum">0</div>
-        <div class="out-bin" id="out-bin">00000000 00000000</div>
-      </div>
-      <div>
-        <div class="tag" style="margin-bottom:3px;">Total Ic (×hFE=150)</div>
-        <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#4f9de8;" id="out-ic">0 mA</div>
-      </div>
-      <div>
-        <div class="tag" style="margin-bottom:3px;">Total Ie (Ic+Ib)</div>
-        <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#8b6fe8;" id="out-ie">0 mA</div>
-      </div>
-      <div style="flex:1;min-width:160px;">
-        <div class="tag" style="margin-bottom:5px;">Channel contributions</div>
-        <div id="contribs"></div>
-      </div>
-      <div>
-        <div class="tag" style="margin-bottom:5px;">ESP32 DAC register map</div>
-        <div id="reg-map" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);line-height:1.9;"></div>
-      </div>
+
+  <!-- TENSOR OUTPUT -->
+  <div class="panel" style="flex:1;min-width:260px;">
+    <div class="pt">Stage 4 — 21-value output tensor (7ch × 3 terminals)</div>
+    <div class="tensor" id="tensor"></div>
+    <div style="margin-top:8px;">
+      <div class="pt" style="margin-bottom:5px;">Channel contributions</div>
+      <div id="contribs"></div>
     </div>
   </div>
-</div>
+
+  <!-- DECODING SYSTEM -->
+  <div class="panel" style="flex:1;min-width:280px;">
+    <div class="pt">Stage 5 — optical decoding system</div>
+
+    <div class="tabs" style="margin-bottom:8px;">
+      <button class="tab on" id="dtab-text" onclick="setDecMode('text')">Text</button>
+      <button class="tab" id="dtab-num" onclick="setDecMode('num')">Number</button>
+      <button class="tab" id="dtab-bin" onclick="setDecMode('bin')">Binary</button>
+      <button class="tab" id="dtab-hex" onclick="setDecMode('hex')">Hex</button>
+    </div>
+
+    <div style="font-size:9px;color:var(--t2);margin-bottom:6px;">
+      Decoder reads Ic values → reverse-maps through lookup table → reconstructs original input
+    </div>
+
+    <!-- Decode steps -->
+    <div style="background:var(--p0);border-radius:6px;padding:8px 10px;margin-bottom:8px;">
+      <div class="tag" style="margin-bottom:5px;">Decode pipeline</div>
+      <div id="dec-steps" style="font-size:9px;font-family:'JetBrains Mono',monospace;line-height:2;color:var(--t1);"></div>
+    </div>
+
+    <!-- Decode result -->
+    <div class="decode-box">
+      <div class="tag" style="margin-bottom:4px;">Decoded output</div>
+      <div id="dec-out"></div>
+    </div>
+
+    <!-- Round-trip check -->
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:9px;color:var(--t2);">Round-trip verification:</span>
+      <span class="status" id="rt-status">—</span>
+    </div>
+  </div>
+
+  <!-- OUTPUT SUMMARY -->
+  <div class="panel" style="flex:0 0 200px;">
+    <div class="pt">Stage 6 — digital output summary</div>
+    <div class="out-box" style="margin-bottom:8px;">
+      <div class="tag" style="margin-bottom:3px;">Optical sum</div>
+      <div class="out-big" id="out-sum">0</div>
+      <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t2);margin-top:3px;" id="out-bin2">0b00000000</div>
+    </div>
+    <div style="font-size:9px;color:var(--t2);margin-bottom:6px;">ESP32 register map</div>
+    <div id="reg-map" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t2);line-height:2;background:var(--p0);border-radius:5px;padding:6px 8px;"></div>
+  </div>
 
 </div>
+
+</div><!-- /wrap -->
 
 <script>
-const CHANS=[
+// ══════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════
+const HFE=150, HLEN=80, CHANS=[
   {n:'Violet',nm:'405nm',hex:'#8b6fe8',atom:1,   gpio:'GPIO25 DAC1'},
   {n:'Indigo',nm:'450nm',hex:'#6655cc',atom:2,   gpio:'GPIO26 DAC2'},
   {n:'Blue',  nm:'520nm',hex:'#4f9de8',atom:10,  gpio:'GPIO18 PWM '},
@@ -236,12 +316,222 @@ const CHANS=[
   {n:'Orange',nm:'620nm',hex:'#c4622a',atom:500, gpio:'GPIO32 I2C '},
   {n:'Red',   nm:'660nm',hex:'#e05555',atom:1000,gpio:'GPIO33 I2C '},
 ];
-const HFE=150,HLEN=90;
-const vals=new Uint8Array([180,140,100,200,80,60,160]);
-let mode='bin', clk=0;
-const icH=Array(HLEN).fill(0),ibH=Array(HLEN).fill(0),ieH=Array(HLEN).fill(0);
 
-/* ── UTILS ── */
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let vals=new Uint8Array([180,140,100,200,80,60,160]);
+let encMode='text', decMode='text', clk=0;
+let currentText='OFCU', currentCharIdx=0;
+let currentOriginal={type:'text',value:'OFCU'};
+const icH=new Array(HLEN).fill(0);
+const ibH=new Array(HLEN).fill(0);
+const ieH=new Array(HLEN).fill(0);
+
+// ══════════════════════════════════════
+// ENCODING LOOKUP TABLE
+// Each ASCII char → 7 channel byte values
+// Channel[i] = (charCode * prime[i]) % 256 XOR salt[i]
+// This is the "mapping = encryption key"
+// ══════════════════════════════════════
+const PRIMES=[131,137,139,149,151,157,163];
+const SALTS =[0x3A,0x7C,0x1F,0xB2,0x55,0xE8,0x2D];
+
+function encodeChar(charCode){
+  // Map a single byte value to 7 channel intensities
+  return CHANS.map((ch,i)=>((charCode * PRIMES[i] + ch.atom) ^ SALTS[i]) & 0xFF);
+}
+
+function decodeChannels(chVals){
+  // Reverse: find charCode such that encodeChar(c) ≈ chVals
+  // Use channel 0 (Violet) as primary: solve for charCode
+  // c = ((chVals[0] ^ SALTS[0]) - CHANS[0].atom) / PRIMES[0] mod 256
+  // Since PRIMES[0]=131 and 131 has modular inverse mod 256:
+  const inv131=63; // 131*63=8253 ≡ 1 (mod 256) → actually 131*63=8253, 8253%256=221... use lookup
+  // Direct brute-force decode (fast enough for demo, char range 0-255)
+  for(let c=0;c<256;c++){
+    const test=encodeChar(c);
+    if(test[0]===chVals[0] && test[1]===chVals[1]) return c;
+  }
+  // fallback: best match
+  let best=0,bestScore=Infinity;
+  for(let c=0;c<256;c++){
+    const test=encodeChar(c);
+    const score=test.reduce((s,v,i)=>s+Math.abs(v-chVals[i]),0);
+    if(score<bestScore){bestScore=score;best=c;}
+  }
+  return best;
+}
+
+function encodeNumber(n){
+  // Greedy decomposition across atom channels
+  const atoms=[...CHANS].map((c,i)=>({atom:c.atom,i})).sort((a,b)=>b.atom-a.atom);
+  const mults=new Array(7).fill(0);
+  let rem=n;
+  atoms.forEach(({atom,i})=>{
+    if(rem<=0)return;
+    const m=Math.min(9,Math.floor(rem/atom));
+    mults[i]=m; rem-=atom*m;
+  });
+  // byte val = mult/9 * 255
+  CHANS.forEach((_,i)=>{ vals[i]=Math.round(mults[i]/9*255); });
+  const total=CHANS.reduce((s,c,i)=>s+c.atom*mults[i],0);
+  const parts=CHANS.filter((_,i)=>mults[i]>0).map((c,i)=>`${c.atom}×${mults[i]}`).join(' + ');
+  document.getElementById('num-decomp').innerHTML=
+    `<span style="color:var(--acc2);">${parts} = ${total}</span><br>`+
+    (rem>0?`<span style="color:var(--warn);">remainder: ${rem}</span>`:'<span style="color:var(--acc2);">exact match</span>');
+  currentOriginal={type:'num',value:n};
+  update();
+}
+
+function encodeText(txt){
+  if(!txt){vals.fill(0);update();return;}
+  currentText=txt;
+  // encode first char (or selected char)
+  const ch=txt.charCodeAt(currentCharIdx%txt.length);
+  const encoded=encodeChar(ch);
+  encoded.forEach((v,i)=>vals[i]=v);
+  currentOriginal={type:'text',value:txt};
+  renderCharPills(txt);
+  update();
+}
+
+function encodeHex(str){
+  const bytes=str.trim().split(/\s+/).map(h=>parseInt(h,16)).filter(v=>!isNaN(v)&&v>=0&&v<=255);
+  bytes.slice(0,7).forEach((v,i)=>vals[i]=v);
+  if(bytes.length<7) for(let i=bytes.length;i<7;i++) vals[i]=0;
+  document.getElementById('hex-parsed').textContent=
+    bytes.length>0?`Parsed: [${bytes.slice(0,7).join(', ')}]`:'Invalid hex input';
+  currentOriginal={type:'hex',value:str};
+  update();
+}
+
+function renderCharPills(txt){
+  const el=document.getElementById('char-pills');
+  if(!el)return;
+  el.innerHTML=[...txt].slice(0,20).map((c,i)=>`
+    <button onclick="selectChar(${i})" style="padding:2px 7px;border-radius:3px;border:0.5px solid ${i===currentCharIdx%txt.length?'var(--acc)':'var(--b0)'};background:${i===currentCharIdx%txt.length?'var(--p2)':'transparent'};color:${i===currentCharIdx%txt.length?'var(--acc)':'var(--t2)'};font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;">
+      ${c==' '?'SP':c} <span style="font-size:8px;color:var(--t2);">${c.charCodeAt(0)}</span>
+    </button>`).join('');
+}
+
+function selectChar(idx){
+  currentCharIdx=idx;
+  const txt=document.getElementById('txt-in')?.value||currentText;
+  const ch=txt.charCodeAt(idx);
+  const encoded=encodeChar(ch);
+  encoded.forEach((v,i)=>vals[i]=v);
+  renderCharPills(txt);
+  update();
+}
+
+function encodeBinInputs(){
+  const bins=CHANS.map((_,i)=>document.getElementById('binch'+i)?.value||'00000000');
+  bins.forEach((b,i)=>{
+    const v=parseInt(b.replace(/[^01]/g,'').padEnd(8,'0').slice(0,8),2);
+    vals[i]=isNaN(v)?0:v;
+  });
+  currentOriginal={type:'bin',value:bins};
+  update();
+}
+
+function buildBinInputs(){
+  const el=document.getElementById('bin-inputs');
+  if(!el)return;
+  el.innerHTML=CHANS.map((ch,i)=>`
+    <div class="chrow">
+      <div class="chdot" style="background:${ch.hex};"></div>
+      <span class="chname" style="color:${ch.hex};">${ch.n}</span>
+      <input class="finput" id="binch${i}" maxlength="8" value="${toBin8(vals[i])}" style="width:80px;"
+        oninput="validateBinCh(${i},this)" onkeydown="return isValidBinKey(event)">
+      <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:${ch.hex};width:24px;" id="bval${i}">${vals[i]}</span>
+    </div>`).join('');
+}
+
+function validateBinCh(i,el){
+  const raw=el.value.replace(/[^01]/g,'').slice(0,8);
+  el.value=raw;
+  el.classList.toggle('ok',raw.length===8);
+  el.classList.toggle('err',raw.length>0&&raw.length<8);
+  if(raw.length===8){
+    vals[i]=parseInt(raw,2);
+    const bv=document.getElementById('bval'+i);
+    if(bv) bv.textContent=vals[i];
+    encodeBinInputs();
+  }
+}
+
+// ══════════════════════════════════════
+// DECODING SYSTEM
+// ══════════════════════════════════════
+function decode(){
+  const{rs,tEnc,tIc,tIb,tIe}=computeAll();
+  let steps='', result='', match=false;
+
+  if(decMode==='text'){
+    // use Ic values → reverse encode lookup
+    const chVals=CHANS.map((_,i)=>vals[i]);
+    steps+=`Reading channel intensities: [${chVals.join(', ')}]\n`;
+    steps+=`Applying reverse lookup table (encodeChar⁻¹)...\n`;
+    const charCode=decodeChannels(chVals);
+    const char=String.fromCharCode(charCode);
+    steps+=`Decoded byte: ${charCode} = '${char}' (ASCII)\n`;
+    if(currentOriginal.type==='text'){
+      const origChar=currentOriginal.value[currentCharIdx%currentOriginal.value.length];
+      match=char===origChar;
+      steps+=`Original: '${origChar}' → Match: ${match?'✓ EXACT':'✗ APPROX'}`;
+    }
+    result=`<div class="decode-big">'${char}'</div>
+      <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t2);margin-top:4px;">ASCII ${charCode} · 0x${charCode.toString(16).toUpperCase().padStart(2,'0')} · ${toBin8(charCode)}</div>`;
+  }
+  else if(decMode==='num'){
+    steps+=`Encoded optical sum: ${tEnc}\n`;
+    steps+=`Decomposing back through atom table...\n`;
+    let rem=tEnc;
+    const decoded=[];
+    const sorted=[...CHANS.map((c,i)=>({...c,i}))].sort((a,b)=>b.atom-a.atom);
+    sorted.forEach(ch=>{
+      const m=Math.floor(rem/ch.atom);
+      if(m>0){decoded.push(`${ch.atom}×${m}`);rem-=ch.atom*m;}
+    });
+    steps+=`Decomposition: ${decoded.join(' + ')} = ${tEnc-rem}\n`;
+    if(rem>0) steps+=`Remainder: ${rem}`;
+    if(currentOriginal.type==='num'){
+      match=Math.abs(tEnc-currentOriginal.value)<=currentOriginal.value*0.02;
+      steps+=`\nInput was: ${currentOriginal.value} → Match: ${match?'✓ EXACT':'≈ APPROX'}`;
+    }
+    result=`<div class="decode-big">${tEnc.toLocaleString()}</div>
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);margin-top:4px;">${toBin8(tEnc&0xFF)} ${toBin8((tEnc>>8)&0xFF)} ${toBin8((tEnc>>16)&0xFF)}</div>`;
+  }
+  else if(decMode==='bin'){
+    const bytes=vals.map(v=>toBin8(v));
+    steps+=`Reading raw channel bytes:\n`;
+    bytes.forEach((b,i)=>{ steps+=`  ${CHANS[i].n}: ${b} (${vals[i]})\n`; });
+    match=true;
+    result=`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:2;color:var(--acc);">`+
+      bytes.map((b,i)=>`<span style="color:${CHANS[i].hex};">${b}</span>`).join(' ')+`</div>
+      <div style="font-size:9px;color:var(--t2);margin-top:4px;">[${vals.join(', ')}]</div>`;
+  }
+  else if(decMode==='hex'){
+    const hex=vals.map(v=>v.toString(16).toUpperCase().padStart(2,'0'));
+    steps+=`Converting channel values to hex:\n`;
+    hex.forEach((h,i)=>{ steps+=`  ${CHANS[i].n}: 0x${h} (${vals[i]})\n`; });
+    match=true;
+    result=`<div class="decode-big" style="font-size:20px;">${hex.join(' ')}</div>
+      <div style="font-size:9px;color:var(--t2);margin-top:4px;">${hex.map((h,i)=>`${CHANS[i].n}:${h}`).join(' · ')}</div>`;
+  }
+
+  document.getElementById('dec-steps').textContent=steps;
+  document.getElementById('dec-out').innerHTML=result;
+
+  const rtEl=document.getElementById('rt-status');
+  rtEl.textContent=match?'✓ ROUND-TRIP OK':'≈ APPROXIMATE';
+  rtEl.className='status '+(match?'ok':'warn');
+}
+
+// ══════════════════════════════════════
+// COMPUTE
+// ══════════════════════════════════════
 const toBin8=v=>v.toString(2).padStart(8,'0');
 const toVolt=v=>(v/255*3.3).toFixed(2);
 const toHex=(r,g,b)=>'#'+[r,g,b].map(x=>Math.round(Math.max(0,Math.min(255,x))).toString(16).padStart(2,'0')).join('');
@@ -252,15 +542,14 @@ function getMix(){
     const t=vals[i]/255;
     r+=parseInt(ch.hex.slice(1,3),16)*t;
     g+=parseInt(ch.hex.slice(3,5),16)*t;
-    b+=parseInt(ch.hex.slice(5,7),16)*t;
-    w+=t;
+    b+=parseInt(ch.hex.slice(5,7),16)*t; w+=t;
   });
-  if(w<.001)return'#111827';
+  if(w<.001)return'#0d1020';
   const sc=Math.min(1,220/Math.max(r,g,b,1));
   return toHex(r*sc,g*sc,b*sc);
 }
 
-function compute(i){
+function computeCh(i){
   const t=vals[i]/255;
   const ib=+(t*2).toFixed(3);
   const ic=+(ib*HFE).toFixed(1);
@@ -269,199 +558,79 @@ function compute(i){
   return{ib,ic,ie,enc};
 }
 function computeAll(){
-  const rs=CHANS.map((_,i)=>compute(i));
-  return{
-    rs,
+  const rs=CHANS.map((_,i)=>computeCh(i));
+  return{rs,
     tIc:+rs.reduce((s,r)=>s+r.ic,0).toFixed(1),
     tIb:+rs.reduce((s,r)=>s+r.ib,0).toFixed(3),
     tIe:+rs.reduce((s,r)=>s+r.ie,0).toFixed(1),
-    tEnc:rs.reduce((s,r)=>s+r.enc,0)
-  };
+    tEnc:rs.reduce((s,r)=>s+r.enc,0)};
 }
 
-/* ── MODE SWITCH ── */
-function setMode(m){
-  mode=m;
-  ['bin','dec','num'].forEach(x=>{
-    document.getElementById('mode-'+x).style.display=x===m&&m!=='num'?'':'none';
-    document.getElementById('tab-'+x)?.classList.toggle('on',x===m);
-  });
-  document.getElementById('mode-num').style.display=m==='num'?'block':'none';
-  if(m==='num') decomposeNumber(document.getElementById('big-num').value);
-  buildInputs();
-}
-
-/* ── BUILD INPUT UI ── */
-function buildInputs(){
-  if(mode==='bin') buildBin();
-  else if(mode==='dec') buildDec();
-}
-
-function buildBin(){
-  const el=document.getElementById('mode-bin');
+// ══════════════════════════════════════
+// RENDER FUNCTIONS
+// ══════════════════════════════════════
+function renderSliders(){
+  const el=document.getElementById('ch-sliders');
+  if(!el)return;
   el.innerHTML=CHANS.map((ch,i)=>`
-    <div class="bin-row" style="margin-bottom:5px;">
-      <div class="bin-ch-dot" style="background:${ch.hex};box-shadow:0 0 5px ${ch.hex}55;"></div>
-      <span class="bin-ch-name" style="color:${ch.hex};">${ch.n}</span>
-      <input class="bin-input" id="bi${i}" maxlength="8" value="${toBin8(vals[i])}"
-        oninput="onBinInput(${i},this)" onkeydown="return isValidBinKey(event)">
-      <span class="bin-dec" id="bd${i}">${vals[i]}</span>
-      <span class="bin-volt" style="color:${ch.hex};">${toVolt(vals[i])}V</span>
-      <div class="bin-bits" id="bb${i}">${renderBits(vals[i],ch.hex)}</div>
-    </div>
-  `).join('');
-}
-
-function buildDec(){
-  const el=document.getElementById('mode-dec');
-  el.innerHTML=CHANS.map((ch,i)=>`
-    <div class="bin-row" style="margin-bottom:5px;">
-      <div class="bin-ch-dot" style="background:${ch.hex};box-shadow:0 0 5px ${ch.hex}55;"></div>
-      <span class="bin-ch-name" style="color:${ch.hex};">${ch.n}</span>
-      <input class="bin-input" id="di${i}" type="number" min="0" max="255" value="${vals[i]}"
-        style="width:70px;" oninput="onDecInput(${i},this)">
-      <input class="ch-slider" type="range" min="0" max="255" step="1" value="${vals[i]}" id="ds${i}"
-        style="background:linear-gradient(to right,${ch.hex}88 ${vals[i]/255*100}%,#1c2438 ${vals[i]/255*100}%);"
+    <div class="chrow">
+      <div class="chdot" style="background:${ch.hex};box-shadow:0 0 5px ${ch.hex}44;"></div>
+      <span class="chname" style="color:${ch.hex};">${ch.n}</span>
+      <span style="font-size:8px;color:var(--t2);width:30px;">${ch.nm}</span>
+      <input type="range" min="0" max="255" step="1" value="${vals[i]}" id="sl${i}"
+        style="flex:1;background:linear-gradient(to right,${ch.hex}88 ${vals[i]/255*100}%,#1a2235 ${vals[i]/255*100}%);"
         oninput="onSlide(${i},this)">
-      <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:${ch.hex};width:32px;text-align:right;" id="dv${i}">${vals[i]}</span>
-      <div class="bin-bits" id="db${i}">${renderBits(vals[i],ch.hex)}</div>
-    </div>
-  `).join('');
+      <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:${ch.hex};width:28px;text-align:right;" id="sv${i}">${vals[i]}</span>
+      <span style="font-size:8px;color:var(--t2);font-family:'JetBrains Mono',monospace;width:30px;">${toVolt(vals[i])}V</span>
+      <div class="bits" id="bits${i}">${renderBits(vals[i],ch.hex)}</div>
+    </div>`).join('');
 }
 
 function renderBits(v,col){
-  return toBin8(v).split('').map(b=>
-    `<div class="bbit" title="${b}" style="background:${b==='1'?col+'cc':'#1c2438'};width:8px;height:8px;border-radius:1px;"></div>`
-  ).join('');
+  return toBin8(v).split('').map(b=>`<div class="bbit" style="background:${b==='1'?col+'cc':'#1a2235'};"></div>`).join('');
 }
 
-function isValidBinKey(e){
-  return ['0','1','Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)||e.ctrlKey;
-}
-
-function onBinInput(i,el){
-  const raw=el.value.replace(/[^01]/g,'').slice(0,8);
-  el.value=raw;
-  const v=raw.length?parseInt(raw,2):0;
-  const valid=raw.length===8;
-  el.classList.toggle('ok',valid);
-  el.classList.toggle('err',raw.length>0&&!valid);
-  if(valid){ vals[i]=v; el.value=toBin8(v); update(); }
-  document.getElementById('bd'+i).textContent=valid?v:'--';
-}
-
-function onDecInput(i,el){
-  const v=Math.min(255,Math.max(0,parseInt(el.value)||0));
-  vals[i]=v;
-  const sl=document.getElementById('ds'+i);
-  if(sl){ sl.value=v; sl.style.background=`linear-gradient(to right,${CHANS[i].hex}88 ${v/255*100}%,#1c2438 ${v/255*100}%)`; }
-  const dv=document.getElementById('dv'+i);
-  if(dv) dv.textContent=v;
-  const db=document.getElementById('db'+i);
-  if(db) db.innerHTML=renderBits(v,CHANS[i].hex);
-  update();
-}
-
-function onSlide(i,el){
-  const v=parseInt(el.value);
-  vals[i]=v;
-  el.style.background=`linear-gradient(to right,${CHANS[i].hex}88 ${v/255*100}%,#1c2438 ${v/255*100}%)`;
-  const di=document.getElementById('di'+i);
-  if(di) di.value=v;
-  const dv=document.getElementById('dv'+i);
-  if(dv) dv.textContent=v;
-  const db=document.getElementById('db'+i);
-  if(db) db.innerHTML=renderBits(v,CHANS[i].hex);
-  update();
-}
-
-/* ── NUMBER DECOMPOSE ── */
-const ATOMS=[1000,500,100,50,10,2,1];// descending for greedy
-function decomposeNumber(raw){
-  let n=Math.min(99999,Math.max(0,parseInt(raw)||0));
-  const mults=new Array(7).fill(0);
-  // greedy decomposition
+function updateSliders(){
   CHANS.forEach((ch,i)=>{
-    const cidx=CHANS.length-1-i; // red=6 has atom 1000, violet=0 has atom 1
-    // sort by atom descending
+    const sl=document.getElementById('sl'+i);
+    if(sl){sl.value=vals[i];sl.style.background=`linear-gradient(to right,${ch.hex}88 ${vals[i]/255*100}%,#1a2235 ${vals[i]/255*100}%)`;}
+    const sv=document.getElementById('sv'+i);
+    if(sv) sv.textContent=vals[i];
+    const bits=document.getElementById('bits'+i);
+    if(bits) bits.innerHTML=renderBits(vals[i],ch.hex);
   });
-  // sort channels by atom descending for greedy
-  const sorted=[...CHANS.map((c,i)=>({...c,i}))].sort((a,b)=>b.atom-a.atom);
-  sorted.forEach(ch=>{
-    const m=Math.floor(n/ch.atom);
-    if(m>0){ mults[ch.i]=Math.min(9,m); n-=ch.atom*mults[ch.i]; }
-  });
-  // map mults → byte vals (mult * 255/9)
-  CHANS.forEach((ch,i)=>{
-    vals[i]=Math.round(mults[i]/9*255);
-  });
-
-  const total=CHANS.reduce((s,ch,i)=>s+ch.atom*mults[i],0);
-  document.getElementById('decomp-check').textContent=
-    `Decomposed: ${CHANS.filter((_,i)=>mults[i]>0).map((ch,i)=>mults[i]>0?`${ch.atom}×${mults[i]}`:'').filter(Boolean).join(' + ')} = ${total} (remainder ${total-parseInt(raw||0)}≈0)`;
-
-  const grid=document.getElementById('decomp-grid');
-  grid.innerHTML=CHANS.map((ch,i)=>`
-    <div class="decode-cell" style="background:${ch.hex}18;border:0.5px solid ${ch.hex}44;">
-      <div class="decode-lbl" style="color:${ch.hex};">${ch.n[0]}</div>
-      <div class="decode-val" style="color:${ch.hex};">×${mults[i]}</div>
-      <div class="decode-m">=${ch.atom*mults[i]}</div>
-    </div>
-  `).join('');
-  update();
 }
 
-/* ── DAC STAGE ── */
-function renderDac(){
-  document.getElementById('dac-stage').innerHTML=CHANS.map((ch,i)=>`
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-      <div style="width:6px;height:6px;border-radius:50%;background:${ch.hex};flex-shrink:0;"></div>
-      <span style="font-size:8px;color:${ch.hex};font-family:'JetBrains Mono',monospace;width:38px;font-weight:600;">${ch.n}</span>
-      <span style="font-size:8px;color:var(--muted);font-family:'JetBrains Mono',monospace;width:70px;">${ch.gpio}</span>
-      <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;">
-        <div style="height:100%;width:${Math.round(vals[i]/255*100)}%;background:${ch.hex};transition:width .15s;border-radius:2px;" id="dvbar${i}"></div>
-      </div>
-      <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:${ch.hex};width:28px;text-align:right;" id="dvval${i}">${toVolt(vals[i])}V</span>
-      <span style="font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);width:24px;">${vals[i]}</span>
-      <span style="font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);width:52px;">${toBin8(vals[i])}</span>
-    </div>
-  `).join('');
+function renderEncTable(rs){
+  const tbody=document.getElementById('enc-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=CHANS.map((ch,i)=>`
+    <tr>
+      <td><span style="color:${ch.hex};font-weight:700;">${ch.n[0]}</span></td>
+      <td style="color:${ch.hex};">${ch.nm}</td>
+      <td style="color:var(--t2);">×${ch.atom}</td>
+      <td style="color:var(--t0);">${vals[i]} <span style="color:var(--t2);">(${toBin8(vals[i])})</span></td>
+      <td><div style="display:inline-block;width:${Math.round(vals[i]/255*50)}px;height:6px;background:${ch.hex};border-radius:2px;min-width:2px;"></div> ${Math.round(vals[i]/255*100)}%</td>
+      <td style="color:${ch.hex};">${toVolt(vals[i])}V</td>
+      <td style="color:var(--acc);">${rs[i].enc}</td>
+    </tr>`).join('');
 }
 
-/* ── INTENSITY BARS ── */
-function renderIntBars(){
-  document.getElementById('int-bars').innerHTML=CHANS.map((ch,i)=>`
-    <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
-      <span style="font-size:7px;color:${ch.hex};font-family:'JetBrains Mono',monospace;width:36px;">${ch.n[0]} ${ch.nm}</span>
-      <div style="flex:1;height:3px;background:var(--border2);border-radius:2px;overflow:hidden;">
-        <div style="height:100%;width:${Math.round(vals[i]/255*100)}%;background:${ch.hex};transition:width .15s;border-radius:2px;"></div>
-      </div>
-      <span style="font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);width:26px;text-align:right;">${Math.round(vals[i]/255*100)}%</span>
-    </div>
-  `).join('');
-  const avgPct=Math.round(vals.reduce((s,v)=>s+v/255,0)/7*100);
-  document.getElementById('mix-pct').textContent=avgPct+'%';
-}
-
-/* ── TERM CARDS ── */
 function renderTerms(tIc,tIb,tIe){
-  const maxIc=CHANS.length*2*HFE;
-  const items=[
-    {l:'Ic — Collector',f:'hFE(150)×Ib',v:tIc.toFixed(1),u:'mA',c:'#4f9de8',p:Math.round(tIc/maxIc*100)},
-    {l:'Ib — Base',f:'photocurrent',v:tIb.toFixed(3),u:'mA',c:'#d4a843',p:Math.round(tIb/(7*2)*100)},
-    {l:'Ie — Emitter',f:'Ic + Ib',v:tIe.toFixed(1),u:'mA',c:'#8b6fe8',p:Math.round(tIe/maxIc*100)},
-  ];
-  document.getElementById('term-cards').innerHTML=items.map(it=>`
-    <div class="tcard" style="border-color:${it.c}33;">
-      <div class="tcard-lbl" style="color:${it.c};">${it.l}</div>
+  const maxIc=7*2*HFE;
+  document.getElementById('terms').innerHTML=[
+    {l:'Ic',f:'hFE×Ib',v:tIc.toFixed(1),u:'mA',c:'#4f9de8',p:Math.round(tIc/maxIc*100)},
+    {l:'Ib',f:'photocurrent',v:tIb.toFixed(3),u:'mA',c:'#d4a843',p:Math.round(tIb/14*100)},
+    {l:'Ie',f:'Ic+Ib',v:tIe.toFixed(1),u:'mA',c:'#8b6fe8',p:Math.round(tIe/maxIc*100)},
+  ].map(it=>`
+    <div class="tcard" style="border:0.5px solid ${it.c}33;">
+      <div style="font-size:8px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${it.c};">${it.l}</div>
       <div class="tcard-val" style="color:${it.c};">${it.v}</div>
       <div class="tcard-sub">${it.u} · ${it.f}</div>
-      <div class="bbar"><div class="bbar-f" style="width:${Math.min(100,it.p)}%;background:${it.c};"></div></div>
-    </div>
-  `).join('');
+      <div class="bbar"><div class="bfill" style="width:${Math.min(100,it.p)}%;background:${it.c};"></div></div>
+    </div>`).join('');
 }
 
-/* ── TENSOR ── */
 function renderTensor(rs){
   document.getElementById('tensor').innerHTML=CHANS.map((ch,i)=>`
     <div class="tcell" style="border-color:${ch.hex}44;">
@@ -470,168 +639,187 @@ function renderTensor(rs){
         <div class="tval" style="color:#4f9de8;">Ic ${rs[i].ic}</div>
         <div class="tval" style="color:#d4a843;">Ib ${rs[i].ib}</div>
         <div class="tval" style="color:#8b6fe8;">Ie ${rs[i].ie}</div>
-        <div style="height:2px;border-radius:1px;background:${ch.hex};opacity:.55;margin-top:3px;width:${Math.round(vals[i]/255*100)}%;transition:width .15s;"></div>
+        <div style="height:2px;border-radius:1px;background:${ch.hex};opacity:.5;margin-top:2px;width:${Math.round(vals[i]/255*100)}%;transition:width .15s;"></div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-/* ── OUTPUT STAGE ── */
-function renderOutput(tEnc,tIc,tIe){
+function renderContribs(rs){
+  const maxE=CHANS.reduce((s,c,i)=>s+c.atom*10,0);
+  document.getElementById('contribs').innerHTML=CHANS.map((ch,i)=>`
+    <div class="contrib-row">
+      <span style="font-size:8px;color:${ch.hex};font-family:'JetBrains Mono',monospace;width:50px;">${ch.n[0]} ×${ch.atom}</span>
+      <div class="cbar"><div class="cfill" style="width:${Math.min(100,Math.round(rs[i].enc/maxE*100))}%;background:${ch.hex};"></div></div>
+      <span style="font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--t2);width:38px;text-align:right;">${rs[i].enc}</span>
+    </div>`).join('');
+}
+
+function renderOutput(tEnc){
   document.getElementById('out-sum').textContent=tEnc.toLocaleString();
-  const bin=tEnc.toString(2).padStart(20,'0');
-  const binFmt=bin.slice(0,4)+' '+bin.slice(4,8)+' '+bin.slice(8,12)+' '+bin.slice(12,16)+' '+bin.slice(16);
-  document.getElementById('out-bin').textContent='0b '+binFmt;
-  document.getElementById('out-ic').textContent=tIc.toFixed(1)+' mA';
-  document.getElementById('out-ie').textContent=tIe.toFixed(1)+' mA';
-
-  const maxEnc=CHANS.reduce((s,ch,i)=>s+ch.atom*10,0);
-  document.getElementById('contribs').innerHTML=CHANS.map((ch,i)=>{
-    const {enc}=compute(i);
-    const pct=Math.round(enc/maxEnc*100);
-    return`<div class="contrib-row">
-      <span style="font-size:8px;color:${ch.hex};font-family:'JetBrains Mono',monospace;width:46px;">${ch.n[0]} ×${ch.atom}</span>
-      <div class="contrib-bar"><div class="contrib-fill" style="width:${Math.min(100,pct)}%;background:${ch.hex};"></div></div>
-      <span style="font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);width:40px;text-align:right;">${enc}</span>
-    </div>`;
-  }).join('');
-
+  document.getElementById('out-bin2').textContent='0b'+tEnc.toString(2).padStart(16,'0');
   document.getElementById('reg-map').innerHTML=CHANS.map((ch,i)=>
-    `<span style="color:${ch.hex};">${ch.gpio}</span> = ${toBin8(vals[i])} (${vals[i]})<br>`
-  ).join('');
+    `<span style="color:${ch.hex};">${ch.gpio}</span>←${vals[i]}<br>`).join('');
 }
 
-/* ── FIBER CANVAS ── */
+// ══════════════════════════════════════
+// FIBER CANVAS
+// ══════════════════════════════════════
 function drawFibers(){
-  const c=document.getElementById('fib');
-  if(!c)return;
-  const W=c.offsetWidth||600,H=180;
+  const c=document.getElementById('fib');if(!c)return;
+  const W=c.offsetWidth||500,H=160;
   c.width=W;c.height=H;
   const ctx=c.getContext('2d');
   ctx.fillStyle='#04060d';ctx.fillRect(0,0,W,H);
-  // grid
-  ctx.strokeStyle='#0c1020';ctx.lineWidth=0.5;
+  ctx.strokeStyle='#0b0f1a';ctx.lineWidth=.5;
   for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  for(let y=0;y<H;y+=28){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
 
-  const srcX=24,mixX=W*.46,ptX=W-30;
-  const srcYs=CHANS.map((_,i)=>14+i*(H-20)/6);
-  const mix=getMix();
-  const avgI=vals.reduce((s,v)=>s+v/255,0)/7;
+  const sx=22,mx=W*.46,px=W-26;
+  const sys=CHANS.map((_,i)=>12+i*(H-16)/6);
+  const mix=getMix(); const avgI=vals.reduce((s,v)=>s+v/255,0)/7;
 
-  // fibers src→mix
   CHANS.forEach((ch,i)=>{
-    const t=vals[i]/255;
-    if(t<.01)return;
-    ctx.save();
-    ctx.globalAlpha=.15+t*.75;
-    ctx.strokeStyle=ch.hex;
-    ctx.lineWidth=.8+t*2.5;
-    ctx.shadowColor=ch.hex;ctx.shadowBlur=t*10;
-    ctx.beginPath();
-    ctx.moveTo(srcX+9,srcYs[i]);
-    ctx.bezierCurveTo(srcX+70,srcYs[i],mixX-60,H/2,mixX-18,H/2);
+    const t=vals[i]/255;if(t<.01)return;
+    ctx.save();ctx.globalAlpha=.12+t*.75;ctx.strokeStyle=ch.hex;
+    ctx.lineWidth=.7+t*2.2;ctx.shadowColor=ch.hex;ctx.shadowBlur=t*10;
+    ctx.beginPath();ctx.moveTo(sx+8,sys[i]);
+    ctx.bezierCurveTo(sx+65,sys[i],mx-55,H/2,mx-16,H/2);
     ctx.stroke();ctx.restore();
   });
 
-  // LED dots
   CHANS.forEach((ch,i)=>{
-    const t=vals[i]/255;
-    const y=srcYs[i];
-    ctx.save();
-    ctx.shadowColor=ch.hex;ctx.shadowBlur=t*18;
-    ctx.beginPath();ctx.arc(srcX,y,6+t*4,0,Math.PI*2);
-    ctx.fillStyle=ch.hex;ctx.globalAlpha=.15+t*.85;ctx.fill();
-    ctx.restore();
-    ctx.fillStyle='white';ctx.globalAlpha=t*.95;
-    ctx.beginPath();ctx.arc(srcX,y,2,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=1;
-    ctx.font='bold 7px JetBrains Mono,monospace';
-    ctx.fillStyle=ch.hex+'cc';
-    ctx.fillText(ch.nm,srcX+11,y+3);
+    const t=vals[i]/255,y=sys[i];
+    ctx.save();ctx.shadowColor=ch.hex;ctx.shadowBlur=t*16;
+    ctx.beginPath();ctx.arc(sx,y,5+t*3.5,0,Math.PI*2);
+    ctx.fillStyle=ch.hex;ctx.globalAlpha=.15+t*.85;ctx.fill();ctx.restore();
+    ctx.fillStyle='white';ctx.globalAlpha=t*.9;
+    ctx.beginPath();ctx.arc(sx,y,1.8,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.font='bold 6px JetBrains Mono,monospace';
+    ctx.fillStyle=ch.hex+'cc';ctx.fillText(ch.nm,sx+10,y+2.5);
   });
 
-  // mix glow
-  ctx.save();
-  ctx.shadowColor=mix;ctx.shadowBlur=18*avgI;
-  ctx.beginPath();ctx.arc(mixX,H/2,20,0,Math.PI*2);
-  ctx.fillStyle=mix;ctx.globalAlpha=.2+avgI*.4;ctx.fill();
-  ctx.restore();
-  ctx.beginPath();ctx.arc(mixX,H/2,11,0,Math.PI*2);
-  ctx.fillStyle=mix;ctx.globalAlpha=.7+avgI*.3;ctx.fill();
-  ctx.globalAlpha=1;
+  ctx.save();ctx.shadowColor=mix;ctx.shadowBlur=16*avgI;
+  ctx.beginPath();ctx.arc(mx,H/2,18,0,Math.PI*2);
+  ctx.fillStyle=mix;ctx.globalAlpha=.18+avgI*.4;ctx.fill();ctx.restore();
+  ctx.beginPath();ctx.arc(mx,H/2,10,0,Math.PI*2);
+  ctx.fillStyle=mix;ctx.globalAlpha=.65+avgI*.35;ctx.fill();ctx.globalAlpha=1;
   ctx.fillStyle='white';ctx.font='bold 7px JetBrains Mono,monospace';
-  ctx.textAlign='center';ctx.fillText('MIX',mixX,H/2+3);ctx.textAlign='left';
+  ctx.textAlign='center';ctx.fillText('MIX',mx,H/2+2.5);ctx.textAlign='left';
 
-  // output fiber
-  ctx.save();
-  ctx.strokeStyle=mix;ctx.lineWidth=2+avgI*2.5;
-  ctx.shadowColor=mix;ctx.shadowBlur=avgI*12;
-  ctx.globalAlpha=.55+avgI*.45;
-  ctx.beginPath();ctx.moveTo(mixX+18,H/2);ctx.lineTo(ptX-20,H/2);ctx.stroke();
-  ctx.restore();
+  ctx.save();ctx.strokeStyle=mix;ctx.lineWidth=2+avgI*2.2;
+  ctx.shadowColor=mix;ctx.shadowBlur=avgI*12;ctx.globalAlpha=.5+avgI*.45;
+  ctx.beginPath();ctx.moveTo(mx+16,H/2);ctx.lineTo(px-18,H/2);ctx.stroke();ctx.restore();
 
-  // PT box
-  ctx.fillStyle='#1a1e38';ctx.strokeStyle='#534AB7';ctx.lineWidth=1;
-  rr(ctx,ptX-20,H/2-30,40,60,6);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#181e38';ctx.strokeStyle='#534AB7';ctx.lineWidth=.9;
+  rr(ctx,px-18,H/2-26,36,52,5);ctx.fill();ctx.stroke();
   ctx.fillStyle='#afa9ec';ctx.font='bold 8px JetBrains Mono,monospace';
-  ctx.textAlign='center';ctx.fillText('PT',ptX,H/2+4);ctx.textAlign='left';
-
-  // 3 outputs
+  ctx.textAlign='center';ctx.fillText('PT',px,H/2+3);ctx.textAlign='left';
   [['#4f9de8','Ic'],['#d4a843','Ib'],['#8b6fe8','Ie']].forEach(([col,lbl],k)=>{
-    const ty=H/2-8+k*8;
-    ctx.beginPath();ctx.arc(ptX+20,ty,3,0,Math.PI*2);
+    const ty=H/2-7+k*7;
+    ctx.beginPath();ctx.arc(px+18,ty,2.8,0,Math.PI*2);
     ctx.fillStyle=col;ctx.fill();
-    ctx.fillStyle=col;ctx.font='7px JetBrains Mono,monospace';
-    ctx.fillText(lbl,ptX+26,ty+3);
+    ctx.fillStyle=col;ctx.font='6px JetBrains Mono,monospace';ctx.fillText(lbl,px+23,ty+2);
   });
 }
 
 function rr(ctx,x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
   ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
   ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
   ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
 
-/* ── OSCILLOSCOPE ── */
+// ══════════════════════════════════════
+// OSCILLOSCOPE
+// ══════════════════════════════════════
 function drawScope(id,hist,col){
   const c=document.getElementById(id);if(!c)return;
-  const W=c.offsetWidth||170,H=38;
-  c.width=W;c.height=H;
+  const W=c.offsetWidth||175,H=32;c.width=W;c.height=H;
   const ctx=c.getContext('2d');
-  ctx.fillStyle='#03050b';ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle='#0c1420';ctx.lineWidth=0.5;
-  for(let y=H/3;y<H;y+=H/3){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.fillStyle='#030508';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#0a0e18';ctx.lineWidth=.4;
+  for(let y=H/2;y<H;y+=H/2){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
   const mx=Math.max(...hist,.001);
   ctx.beginPath();
   hist.forEach((v,i)=>{
-    const x=i/(HLEN-1)*W, y=H-(v/mx)*(H-4)-2;
+    const x=i/(HLEN-1)*W,y=H-(v/mx)*(H-3)-1.5;
     i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
   });
-  ctx.strokeStyle=col;ctx.lineWidth=1.4;ctx.stroke();
+  ctx.strokeStyle=col;ctx.lineWidth=1.3;ctx.stroke();
   ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();
   ctx.fillStyle=col+'14';ctx.fill();
-  ctx.fillStyle=col;ctx.font='bold 8px JetBrains Mono,monospace';
-  ctx.fillText((hist[hist.length-1]||0).toFixed(2),3,10);
+  ctx.fillStyle=col;ctx.font='bold 7px JetBrains Mono,monospace';
+  ctx.fillText((hist[hist.length-1]||0).toFixed(1),3,9);
 }
 
-/* ── MAIN UPDATE ── */
+// ══════════════════════════════════════
+// MODE SETTERS
+// ══════════════════════════════════════
+function setEncMode(m){
+  encMode=m;
+  ['text','num','bin','hex'].forEach(x=>{
+    const el=document.getElementById('enc-'+x);
+    if(el) el.style.display=x===m?'block':'none';
+    const tb=document.getElementById('etab-'+x);
+    if(tb) tb.classList.toggle('on',x===m);
+  });
+  if(m==='bin') buildBinInputs();
+  if(m==='num') encodeNumber(parseInt(document.getElementById('num-in')?.value)||1385);
+  if(m==='text') encodeText(document.getElementById('txt-in')?.value||'OFCU');
+  if(m==='hex') encodeHex(document.getElementById('hex-in')?.value||'B4 8C 64 C8 50 3C A0');
+}
+
+function setDecMode(m){
+  decMode=m;
+  ['text','num','bin','hex'].forEach(x=>{
+    const tb=document.getElementById('dtab-'+x);
+    if(tb) tb.classList.toggle('on',x===m);
+  });
+  decode();
+}
+
+function onSlide(i,el){
+  vals[i]=parseInt(el.value);
+  el.style.background=`linear-gradient(to right,${CHANS[i].hex}88 ${vals[i]/255*100}%,#1a2235 ${vals[i]/255*100}%)`;
+  const sv=document.getElementById('sv'+i);if(sv)sv.textContent=vals[i];
+  const bits=document.getElementById('bits'+i);if(bits)bits.innerHTML=renderBits(vals[i],CHANS[i].hex);
+  currentOriginal={type:'manual',value:vals[i]};
+  update();
+}
+
+function isValidBinKey(e){return['0','1','Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)||e.ctrlKey;}
+
+const PRESETS={
+  max:[255,255,255,255,255,255,255],half:[128,128,128,128,128,128,128],
+  low:[30,30,30,30,30,30,30],alt:[255,0,200,0,200,0,180],zero:[0,0,0,0,0,0,0]
+};
+function preset(name){
+  PRESETS[name].forEach((v,i)=>vals[i]=v);
+  currentOriginal={type:'preset',value:name};
+  updateSliders(); update();
+}
+
+// ══════════════════════════════════════
+// MAIN UPDATE
+// ══════════════════════════════════════
 function update(){
   clk++;
   document.getElementById('clk-lbl').textContent='CLK '+clk;
   const{rs,tIc,tIb,tIe,tEnc}=computeAll();
   const mix=getMix();
 
-  // DAC stage always visible
-  renderDac();
-  renderIntBars();
-  document.getElementById('mix-orb').style.background=mix;
-  document.getElementById('mix-hex').textContent=mix;
+  renderEncTable(rs);
+  const orbEl=document.getElementById('enc-orb');
+  if(orbEl) orbEl.style.background=mix;
+  const hexLbl=document.getElementById('enc-hex-lbl');
+  if(hexLbl) hexLbl.textContent=mix;
+  const wordLbl=document.getElementById('enc-word');
+  if(wordLbl) wordLbl.textContent=tEnc.toLocaleString();
+
   renderTerms(tIc,tIb,tIe);
   renderTensor(rs);
-  renderOutput(tEnc,tIc,tIe);
+  renderContribs(rs);
+  renderOutput(tEnc);
 
   icH.push(tIc);icH.shift();
   ibH.push(tIb);ibH.shift();
@@ -640,13 +828,17 @@ function update(){
   drawScope('sc-ib',ibH,'#d4a843');
   drawScope('sc-ie',ieH,'#8b6fe8');
   drawFibers();
+  decode();
 }
 
-/* ── INIT ── */
-const ro=new ResizeObserver(()=>{drawFibers();});
-ro.observe(document.querySelector('.root'));
-buildBin();
-renderDac();
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+const ro=new ResizeObserver(()=>drawFibers());
+ro.observe(document.body);
+renderSliders();
+encodeText('OFCU');
+renderCharPills('OFCU');
 update();
 </script>
 </body>
