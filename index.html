@@ -2,758 +2,1244 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>W-OWCU — Weighted Multi-Wavelength Optical Compute Unit</title>
+<title>W-OWCU v2 — Scientific Optical Compute Demonstrator</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
+/* ── RESET & TOKENS ─────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#040810;
-  --p0:#060c17;
-  --p1:#080e1c;
-  --p2:#0c1525;
-  --b0:#0f1e38;
-  --b1:#162440;
-  --b2:#1e304f;
-  --t0:#d0e8ff;
-  --t1:#7ca8d8;
-  --t2:#3a5878;
-  --acc:#2e8fff;
-  --acc2:#00e5a0;
-  --acc3:#ff6b35;
-  --warn:#f5c842;
-  --ch0:#ff4466; /* Red */
-  --ch1:#ff7733; /* Orange */
-  --ch2:#ffe033; /* Yellow */
-  --ch3:#44dd88; /* Green */
-  --ch4:#33aaff; /* Blue */
-  --ch5:#8855ff; /* Indigo */
-  --ch6:#cc66ff; /* Violet */
-}
-html,body{background:var(--bg);color:var(--t0);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+  --bg:#05080f;
+  --s0:#070c16;
+  --s1:#0a1120;
+  --s2:#0d1628;
+  --b0:#0f1e35;
+  --b1:#182840;
+  --b2:#1e3250;
+  --t0:#c8deff;
+  --t1:#6a92c0;
+  --t2:#304868;
+  --t3:#1e3050;
+  --acc:#1d7aff;
+  --acc2:#00d48a;
+  --acc3:#ff5c3a;
+  --warn:#f0b429;
+  --err:#ff3e5a;
+  --ok:#00d48a;
 
-/* Scanline overlay */
-body::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);
+  /* wavelength channels */
+  --λ0:#ff3355; --λ1:#ff6622; --λ2:#ffd022;
+  --λ3:#22cc66; --λ4:#2288ff; --λ5:#7744ee; --λ6:#bb44ff;
+
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-sans:'IBM Plex Sans',sans-serif;
+  --r:4px;
+  --panel-pad:14px 16px;
 }
 
-.wrap{padding:16px 18px;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+/* PAPER MODE overrides */
+body.paper{
+  --bg:#f8f6f1; --s0:#eeece7; --s1:#e8e6e0; --s2:#ddd;
+  --b0:#ccc; --b1:#bbb; --b2:#aaa;
+  --t0:#1a2030; --t1:#405070; --t2:#8090a8; --t3:#c0ccd8;
+  --acc:#0055cc; --acc2:#007744; --acc3:#cc3300;
+  --warn:#886600; --err:#cc0022; --ok:#007744;
+}
 
-/* HEADER */
-.header{
-  display:flex;align-items:center;gap:14px;padding:10px 0 6px;
-  border-bottom:1px solid var(--b1);
+html,body{
+  background:var(--bg);color:var(--t0);
+  font-family:var(--font-sans);font-size:12px;
+  min-height:100vh;transition:background .3s,color .3s;
+}
+
+/* SCANLINES (dark only) */
+body:not(.paper)::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* TOP BAR */
+.topbar{
+  display:flex;align-items:center;gap:10px;padding:8px 16px;
+  background:var(--s0);border-bottom:1px solid var(--b0);
+  flex-shrink:0;flex-wrap:wrap;gap:6px;
 }
 .logo{
-  font-family:'Orbitron',monospace;font-size:20px;font-weight:900;
-  letter-spacing:.15em;color:var(--acc);
-  text-shadow:0 0 20px rgba(46,143,255,.5),0 0 40px rgba(46,143,255,.2);
+  font-family:var(--font-mono);font-size:14px;font-weight:700;
+  color:var(--acc);letter-spacing:.1em;
+  text-shadow:0 0 20px rgba(29,122,255,.4);
 }
-.subtitle{font-size:11px;color:var(--t2);letter-spacing:.1em;font-family:'Share Tech Mono',monospace;}
-.clk{
-  margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;
-  color:var(--t2);letter-spacing:.12em;display:flex;align-items:center;gap:6px;
+body.paper .logo{text-shadow:none;}
+.logo sup{font-size:8px;color:var(--t1);vertical-align:super;}
+.topbar-sep{width:1px;height:18px;background:var(--b1);flex-shrink:0;}
+.mode-badge{
+  font-family:var(--font-mono);font-size:8px;letter-spacing:.14em;
+  padding:2px 7px;border-radius:2px;border:1px solid var(--b1);color:var(--t1);
 }
-.clk-dot{width:6px;height:6px;border-radius:50%;background:var(--acc2);animation:pulse 1s infinite;}
-@keyframes pulse{0%,100%{opacity:.4;box-shadow:none;}50%{opacity:1;box-shadow:0 0 8px var(--acc2);}}
+.mode-badge.live{border-color:var(--acc2);color:var(--acc2);}
+.mode-badge.bench{border-color:var(--warn);color:var(--warn);}
+.mode-badge.seq{border-color:var(--acc);color:var(--acc);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.clk{font-family:var(--font-mono);font-size:9px;color:var(--t2);letter-spacing:.08em;}
+.pulse{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--acc2);margin-right:3px;animation:pk 1.2s infinite;}
+@keyframes pk{0%,100%{opacity:.3;}50%{opacity:1;box-shadow:0 0 6px var(--acc2);}}
+
+/* TABS */
+.tabs{
+  display:flex;background:var(--s0);border-bottom:1px solid var(--b0);
+  flex-shrink:0;overflow-x:auto;
+}
+.tab{
+  padding:7px 14px;font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;
+  color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;
+  white-space:nowrap;transition:all .15s;
+}
+.tab:hover{color:var(--t1);}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc);}
+
+/* MAIN BODY */
+.main{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
 
 /* PANELS */
 .panel{
-  background:var(--p1);
-  border:1px solid var(--b1);
-  border-radius:6px;
-  padding:12px 14px;
-  position:relative;
-  overflow:hidden;
+  background:var(--s1);border:1px solid var(--b0);border-radius:var(--r);
+  padding:var(--panel-pad);position:relative;overflow:hidden;
 }
 .panel::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(46,143,255,.03) 0%,transparent 60%);
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(29,122,255,.15),transparent);
   pointer-events:none;
 }
-.pt{
-  font-family:'Share Tech Mono',monospace;
-  font-size:8px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--t2);margin-bottom:10px;padding-bottom:7px;
-  border-bottom:1px solid var(--b0);display:flex;align-items:center;gap:8px;
+body.paper .panel::before{display:none;}
+.ph{
+  font-family:var(--font-mono);font-size:8px;font-weight:600;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--t2);
+  margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--b0);
+  display:flex;align-items:center;gap:8px;
 }
-.pt-step{
+.ph-n{
   display:inline-flex;align-items:center;justify-content:center;
-  width:16px;height:16px;border-radius:3px;background:var(--acc);
-  color:#fff;font-size:9px;font-weight:700;flex-shrink:0;
+  width:15px;height:15px;border-radius:2px;background:var(--acc);
+  color:#fff;font-size:8px;font-weight:700;flex-shrink:0;
 }
 
-/* GRID LAYOUT */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr;}}
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+@media(max-width:720px){.g2,.g3,.g4{grid-template-columns:1fr;}}
 
-/* INPUTS */
-.finput{
-  background:#030609;border:1px solid var(--b2);border-radius:3px;
-  color:var(--t0);font-family:'Share Tech Mono',monospace;font-size:12px;
-  padding:5px 9px;outline:none;transition:border .15s,box-shadow .15s;
+/* CONTROLS */
+.fi{
+  background:var(--s0);border:1px solid var(--b1);border-radius:var(--r);
+  color:var(--t0);font-family:var(--font-mono);font-size:11px;
+  padding:4px 8px;outline:none;transition:border .15s;
 }
-.finput:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(46,143,255,.15);}
-
+.fi:focus{border-color:var(--acc);}
 .btn{
-  padding:5px 13px;border-radius:3px;border:1px solid var(--b2);
-  background:var(--p2);color:var(--t1);
-  font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.06em;
-  cursor:pointer;transition:all .15s;
+  padding:4px 11px;border-radius:var(--r);border:1px solid var(--b1);
+  background:var(--s2);color:var(--t1);font-family:var(--font-mono);
+  font-size:9px;letter-spacing:.06em;cursor:pointer;transition:all .15s;
 }
-.btn:hover{border-color:var(--acc);color:var(--acc);background:#0d1e38;box-shadow:0 0 10px rgba(46,143,255,.1);}
-.btn-accent{border-color:var(--acc);color:var(--acc);}
+.btn:hover{border-color:var(--acc);color:var(--acc);}
+.btn.primary{background:var(--acc);color:#fff;border-color:var(--acc);}
+.btn.primary:hover{background:#1565d8;}
+.btn.danger{border-color:var(--err);color:var(--err);}
+.btn.danger:hover{background:rgba(255,62,90,.1);}
+.sl{accent-color:var(--acc);width:100%;cursor:pointer;}
+label{font-size:9px;color:var(--t2);letter-spacing:.06em;font-family:var(--font-mono);}
 
-/* BIT GRID */
-.bbit{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:22px;height:22px;border-radius:3px;
-  font-size:11px;font-weight:700;font-family:'Share Tech Mono',monospace;
-  cursor:pointer;transition:all .12s;user-select:none;
+/* METRIC CARDS */
+.mc{
+  background:var(--s0);border:1px solid var(--b0);border-radius:var(--r);
+  padding:8px 10px;text-align:center;
 }
+.mc-v{
+  font-family:var(--font-mono);font-size:20px;font-weight:700;line-height:1.1;
+}
+.mc-l{font-size:8px;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
+.mc-s{font-size:8px;color:var(--t2);margin-top:1px;}
 
-/* CHANNEL BARS */
-.ch-bar{
-  display:grid;grid-template-columns:8px 62px 1fr 36px 32px 46px 40px;
-  align-items:center;gap:7px;padding:3px 0;
-}
-.bar-track{height:12px;border-radius:2px;background:var(--b0);overflow:hidden;position:relative;}
-.bar-fill{height:100%;border-radius:2px;transition:width .25s cubic-bezier(.4,0,.2,1);}
-
-/* MATRIX */
-.matrix-grid{
-  display:grid;gap:3px;font-family:'Share Tech Mono',monospace;font-size:10px;
-}
-.m-cell{
-  display:flex;align-items:center;justify-content:center;
-  width:28px;height:22px;border-radius:2px;
-  border:1px solid var(--b0);cursor:pointer;transition:all .12s;
-  font-size:9px;font-weight:700;
-}
-
-/* PT outputs */
-.pt-card{
-  background:var(--p0);border:1px solid var(--b0);border-radius:4px;
-  padding:7px 10px;transition:border .2s;
-}
-.pt-card:hover{border-color:var(--b2);}
-
-/* DATA FLOW */
-.flow-line{
-  font-family:'Share Tech Mono',monospace;font-size:9px;
-  color:var(--t1);line-height:2;
-  background:#030811;border-left:2px solid var(--acc);
-  border-radius:0 4px 4px 0;padding:8px 12px;white-space:pre;overflow-x:auto;
-}
-
-/* METRICS */
-.metric{
-  background:var(--p0);border:1px solid var(--b0);border-radius:5px;
-  padding:8px 12px;text-align:center;
-}
-.metric-val{
-  font-family:'Orbitron',monospace;font-size:22px;font-weight:700;
-  line-height:1.1;
-}
-.metric-lbl{font-size:9px;color:var(--t2);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}
-.metric-sub{font-size:8px;color:var(--t2);margin-top:1px;}
-
-/* BADGE */
+/* BADGES */
 .badge{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:3px 10px;border-radius:3px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.06em;
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:2px;
+  font-family:var(--font-mono);font-size:8px;letter-spacing:.08em;
+  border:1px solid;
+}
+.badge.ok{color:var(--ok);border-color:var(--ok);background:rgba(0,212,138,.06);}
+.badge.err{color:var(--err);border-color:var(--err);background:rgba(255,62,90,.06);}
+.badge.warn{color:var(--warn);border-color:var(--warn);background:rgba(240,180,41,.06);}
+.badge.info{color:var(--acc);border-color:var(--acc);background:rgba(29,122,255,.06);}
+
+/* CODE BLOCKS */
+.codeblock{
+  background:var(--s0);border:1px solid var(--b0);border-radius:var(--r);
+  padding:8px 12px;font-family:var(--font-mono);font-size:9px;
+  color:var(--t1);line-height:2;white-space:pre;overflow-x:auto;
+  border-left:2px solid var(--acc);
 }
 
-/* CANVAS */
-canvas{display:block;border-radius:4px;width:100%;}
-
-/* VECTOR DISPLAY */
-.vec-row{
-  display:flex;align-items:center;gap:4px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;
+/* CHANNEL BAR */
+.chrow{
+  display:grid;align-items:center;gap:6px;
+  grid-template-columns:8px 68px 1fr 36px 34px 52px;
   padding:2px 0;
 }
-.vec-val{
-  width:36px;height:18px;display:flex;align-items:center;justify-content:center;
-  border-radius:2px;border:1px solid var(--b0);font-size:9px;
-  transition:all .2s;
+.bar-t{height:10px;border-radius:2px;background:var(--b0);overflow:hidden;}
+.bar-f{height:100%;border-radius:2px;transition:width .22s cubic-bezier(.4,0,.2,1);}
+
+/* MATRIX */
+.mcell{
+  display:flex;align-items:center;justify-content:center;
+  width:26px;height:20px;border-radius:2px;border:1px solid var(--b0);
+  font-family:var(--font-mono);font-size:9px;font-weight:600;
+  cursor:pointer;transition:all .12s;user-select:none;
+}
+.mcell:hover{border-color:var(--acc);}
+
+/* VECTOR */
+.vval{
+  display:flex;align-items:center;justify-content:center;
+  width:42px;height:18px;border-radius:2px;border:1px solid var(--b0);
+  font-family:var(--font-mono);font-size:8px;transition:all .18s;
 }
 
-/* TABS */
-.tabs{display:flex;gap:4px;margin-bottom:10px;}
-.tab{
-  padding:3px 10px;border-radius:3px;border:1px solid var(--b0);
-  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:.08em;
-  cursor:pointer;color:var(--t2);transition:all .15s;
+/* BIT TOGGLE */
+.bbit{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:2px;
+  font-family:var(--font-mono);font-size:10px;font-weight:600;
+  cursor:pointer;transition:all .1s;user-select:none;
 }
-.tab.active{border-color:var(--acc);color:var(--acc);background:rgba(46,143,255,.08);}
 
-/* RADIX SELECTOR */
-.radix-pill{
-  display:flex;gap:2px;background:var(--p0);border:1px solid var(--b0);
-  border-radius:4px;padding:2px;
-}
-.rpill{
-  padding:2px 8px;border-radius:3px;font-family:'Share Tech Mono',monospace;
-  font-size:8px;cursor:pointer;color:var(--t2);transition:all .15s;
-}
-.rpill.active{background:var(--acc);color:#fff;}
+/* LOG TABLE */
+.logtbl{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:9px;}
+.logtbl th{text-align:left;padding:4px 8px;color:var(--t2);border-bottom:1px solid var(--b0);font-weight:600;letter-spacing:.08em;}
+.logtbl td{padding:3px 8px;border-bottom:1px solid var(--b0);color:var(--t1);}
+.logtbl tr:hover td{background:var(--s2);}
+.logtbl .good{color:var(--ok);}
+.logtbl .bad{color:var(--err);}
+.logtbl .mid{color:var(--warn);}
 
-/* Y-VECTOR COMPUTE VIZ */
-.compute-flow{
-  display:flex;align-items:center;gap:8px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;
-  color:var(--t1);overflow-x:auto;padding:4px 0;
+/* CANVAS */
+canvas{display:block;border-radius:var(--r);width:100%;}
+
+/* ERROR CHART */
+#err-chart{background:var(--s0);border:1px solid var(--b0);border-radius:var(--r);}
+
+/* NOISE PANEL */
+.noise-section{
+  background:var(--s0);border:1px solid var(--b0);border-radius:var(--r);
+  padding:8px 10px;
 }
-.eq-bracket{font-size:28px;color:var(--b2);line-height:1;}
-.matrix-box{
-  display:grid;gap:2px;
-  background:var(--p0);border:1px solid var(--b1);
-  border-radius:4px;padding:4px;
+
+/* SEQUENCE TABLE */
+.seq-cell{
+  padding:3px 6px;border:1px solid var(--b0);border-radius:2px;
+  font-family:var(--font-mono);font-size:9px;text-align:center;
+  cursor:pointer;transition:all .12s;
 }
-.m-row{display:flex;gap:2px;}
+.seq-cell:hover{border-color:var(--acc);}
+.seq-cell.active{background:rgba(29,122,255,.15);border-color:var(--acc);color:var(--acc);}
+
+/* PAPER MODE extras */
+body.paper .panel{box-shadow:0 1px 4px rgba(0,0,0,.08);}
+body.paper .codeblock{background:#fff;}
+body.paper canvas{filter:contrast(1.05);}
 
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px;}
 
-/* GLOW EFFECTS */
-.glow-acc{text-shadow:0 0 12px rgba(46,143,255,.6);}
-.glow-g{text-shadow:0 0 12px rgba(0,229,160,.6);}
-.glow-o{text-shadow:0 0 12px rgba(255,107,53,.6);}
+/* TOOLTIP */
+[data-tip]{position:relative;}
+[data-tip]:hover::after{
+  content:attr(data-tip);position:absolute;bottom:calc(100%+4px);left:50%;
+  transform:translateX(-50%);background:var(--s0);border:1px solid var(--b1);
+  padding:3px 7px;border-radius:3px;font-size:8px;font-family:var(--font-mono);
+  color:var(--t0);white-space:nowrap;z-index:100;pointer-events:none;
+}
+
+/* Anim */
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.panel{animation:fadein .25s ease;}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="app">
 
-<!-- HEADER -->
-<div class="header">
-  <div>
-    <div class="logo">W-OWCU</div>
-    <div class="subtitle">WEIGHTED MULTI-WAVELENGTH OPTICAL COMPUTE UNIT · BASE-256 PARALLEL ENCODING</div>
-  </div>
-  <div class="clk">
-    <div class="clk-dot"></div>
-    <span id="clk-txt">CLK 0</span>
-    <span style="color:var(--b2);">|</span>
-    <span id="mode-txt" style="color:var(--acc2);">LIVE</span>
+<!-- ── TOP BAR ───────────────────────────────────── -->
+<div class="topbar">
+  <span class="logo">W-OWCU<sup>v2</sup></span>
+  <div class="topbar-sep"></div>
+  <span style="font-size:9px;color:var(--t2);font-family:var(--font-mono);">WEIGHTED MULTI-WAVELENGTH OPTICAL COMPUTE UNIT</span>
+  <div class="topbar-sep"></div>
+  <span class="mode-badge live" id="mode-badge"><span class="pulse"></span>LIVE</span>
+
+  <div class="topbar-right">
+    <!-- Noise -->
+    <label>σ_noise</label>
+    <input class="fi" type="range" id="noise-sl" min="0" max="0.15" step="0.001" value="0.005"
+      style="width:70px;padding:0;" oninput="updateNoise()">
+    <span class="fi" id="noise-val" style="width:46px;text-align:center;padding:2px 4px;font-size:9px;">0.005</span>
+
+    <!-- Nonlinearity -->
+    <label>NL</label>
+    <select class="fi" id="nl-sel" style="padding:2px 4px;font-size:9px;" onchange="run()">
+      <option value="none">Linear</option>
+      <option value="sat">Saturation</option>
+      <option value="relu">ReLU</option>
+      <option value="sigmoid">Sigmoid</option>
+    </select>
+
+    <div class="topbar-sep"></div>
+    <button class="btn" onclick="newMatrix()" data-tip="Generate new invertible matrix">↺ Matrix</button>
+    <button class="btn" onclick="togglePaper()" id="paper-btn">◑ Paper</button>
+    <button class="btn primary" onclick="runBenchmark()" id="bench-btn">▶ Benchmark</button>
+    <div class="topbar-sep"></div>
+    <span class="clk" id="clk-txt">CLK 0 | SNR — | det —</span>
   </div>
 </div>
 
-<!-- ROW 1: Input + Encoding -->
-<div class="grid2">
+<!-- ── TABS ──────────────────────────────────────── -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('live')" id="t-live">LIVE COMPUTE</div>
+  <div class="tab" onclick="showTab('matrix')" id="t-matrix">MATRIX / PHYSICS</div>
+  <div class="tab" onclick="showTab('noise')" id="t-noise">NOISE &amp; NONLINEARITY</div>
+  <div class="tab" onclick="showTab('seq')" id="t-seq">SEQUENCE</div>
+  <div class="tab" onclick="showTab('bench')" id="t-bench">BENCHMARK</div>
+  <div class="tab" onclick="showTab('log')" id="t-log">LOG <span id="log-count" style="color:var(--warn);">(0)</span></div>
+</div>
 
-  <!-- STEP 1: INPUT -->
-  <div class="panel">
-    <div class="pt"><span class="pt-step">1</span> INPUT — decimal / binary</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-size:10px;color:var(--t2);">Decimal:</span>
-        <input class="finput" type="number" id="dec-in" value="312" min="0" max="4503599627370495"
-          style="width:120px;" oninput="fromDecimal()">
-        <div class="radix-pill">
-          <div class="rpill active" id="r256" onclick="setRadix(256)">Base-256</div>
-          <div class="rpill" id="r16" onclick="setRadix(16)">Hex</div>
+<!-- ── TAB: LIVE COMPUTE ─────────────────────────── -->
+<div class="main" id="tab-live">
+
+  <div class="g2">
+    <!-- INPUT -->
+    <div class="panel">
+      <div class="ph"><span class="ph-n">1</span>INPUT — decimal / toggle bits</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+          <input class="fi" type="number" id="dec-in" value="312" min="0" max="72057594037927935"
+            style="width:130px;" oninput="fromDecimal()">
+          <button class="btn" onclick="randomInput()">Random</button>
+          <button class="btn" onclick="clearInput()">Clear</button>
+          <button class="btn" onclick="addToSeq()" data-tip="Add to sequence">+ Seq</button>
+        </div>
+        <div id="bit-grid" style="display:flex;gap:2px;flex-wrap:wrap;"></div>
+        <div style="display:flex;align-items:baseline;gap:8px;padding-top:4px;border-top:1px solid var(--b0);">
+          <span style="font-size:8px;color:var(--t2);font-family:var(--font-mono);">DEC</span>
+          <span id="dec-disp" style="font-family:var(--font-mono);font-size:24px;font-weight:700;color:var(--acc);">312</span>
+          <span id="hex-disp" style="font-family:var(--font-mono);font-size:10px;color:var(--t2);">0x138</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span style="font-size:10px;color:var(--t2);">Toggle bits:</span>
-        <div id="bit-grid" style="display:flex;gap:2px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- ENCODING -->
+    <div class="panel">
+      <div class="ph"><span class="ph-n">2</span>BASE-256 ENCODING — positional digits d₀…d₆</div>
+      <div style="font-size:8px;color:var(--t2);margin-bottom:6px;font-family:var(--font-mono);">
+        x = Σᵢ dᵢ · 256ⁱ &nbsp;|&nbsp; Active: <span id="enc-active" style="color:var(--acc2);">0</span> / 7
       </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;">
-        <button class="btn" onclick="randomInput()">Random</button>
-        <button class="btn" onclick="clearInput()">Clear</button>
-        <button class="btn" onclick="newMatrix()">Regen Matrix</button>
-      </div>
-      <div style="display:flex;align-items:baseline;gap:10px;padding-top:4px;border-top:1px solid var(--b0);">
-        <span style="font-size:9px;color:var(--t2);">VALUE</span>
-        <span id="dec-disp" style="font-family:'Orbitron',monospace;font-size:28px;font-weight:700;color:var(--acc);" class="glow-acc">312</span>
-        <span style="font-size:9px;font-family:'Share Tech Mono',monospace;color:var(--t2);" id="hex-disp">0x138</span>
-      </div>
+      <div id="enc-grid"></div>
     </div>
   </div>
 
-  <!-- STEP 2: ENCODING -->
+  <!-- FIBER VIZ + PT -->
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><span class="ph-n">3</span>WAVELENGTH PROPAGATION — fiber mix → PT array</div>
+      <canvas id="fib-canvas" height="200"></canvas>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="ph-n">4</span>PHOTOTRANSISTOR OUTPUTS — y[i] → Ic (noisy)</div>
+      <div id="pt-outputs"></div>
+    </div>
+  </div>
+
+  <!-- DECODE RESULTS -->
   <div class="panel">
-    <div class="pt"><span class="pt-step">2</span> BASE-256 ENCODING — positional digits d₀…d₆</div>
-    <div style="font-size:9px;color:var(--t2);margin-bottom:8px;font-family:'Share Tech Mono',monospace;">
-      x = d₀·256⁰ + d₁·256¹ + … + d₆·256⁶
-    </div>
-    <div id="enc-grid" style="display:flex;flex-direction:column;gap:4px;"></div>
-    <div style="margin-top:8px;font-size:9px;font-family:'Share Tech Mono',monospace;color:var(--t2);">
-      Active digits: <span id="enc-active" style="color:var(--acc2);">0</span>
-      &nbsp;·&nbsp; Max capacity: 256⁷−1 = <span style="color:var(--acc);">72,057,594,037,927,935</span>
-    </div>
-  </div>
-</div>
-
-<!-- STEP 3: MATRIX -->
-<div class="panel">
-  <div class="pt"><span class="pt-step">3</span> OPTICAL WEIGHT MATRIX — y = W · x &nbsp;|&nbsp; 7×7 integer weights</div>
-  <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-    <!-- Matrix W -->
-    <div>
-      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;font-family:'Share Tech Mono',monospace;">W (click cell to edit)</div>
-      <div id="matrix-W" style="display:flex;flex-direction:column;gap:2px;"></div>
-    </div>
-    <!-- Arrow -->
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:30px;color:var(--t2);font-size:16px;">×</div>
-    <!-- Vector x -->
-    <div>
-      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;font-family:'Share Tech Mono',monospace;">x (encoded)</div>
-      <div id="vec-x" style="display:flex;flex-direction:column;gap:2px;"></div>
-    </div>
-    <!-- Arrow -->
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:30px;color:var(--acc);font-size:16px;font-weight:700;">=</div>
-    <!-- Vector y -->
-    <div>
-      <div style="font-size:9px;color:var(--acc2);margin-bottom:5px;font-family:'Share Tech Mono',monospace;">y = W·x (result)</div>
-      <div id="vec-y" style="display:flex;flex-direction:column;gap:2px;"></div>
-    </div>
-    <!-- Computation detail -->
-    <div style="flex:1;min-width:180px;">
-      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;font-family:'Share Tech Mono',monospace;">Row-dot products</div>
-      <div id="dot-detail" style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--t1);line-height:2;background:var(--p0);border-radius:4px;padding:7px 10px;max-height:160px;overflow-y:auto;"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ROW 3: Fiber viz + PT outputs -->
-<div class="grid2">
-  <!-- STEP 4: OPTICAL FIBER -->
-  <div class="panel">
-    <div class="pt"><span class="pt-step">4</span> WAVELENGTH MIX — 7 channels → single fiber → PT array</div>
-    <canvas id="fib-canvas" height="200"></canvas>
-  </div>
-
-  <!-- STEP 5: PT OUTPUTS -->
-  <div class="panel">
-    <div class="pt"><span class="pt-step">5</span> PHOTOTRANSISTOR OUTPUTS — y[i] → Ib → Ic → Ie</div>
-    <div id="pt-outputs" style="display:flex;flex-direction:column;gap:4px;"></div>
-  </div>
-</div>
-
-<!-- STEP 6: DECODE -->
-<div class="panel">
-  <div class="pt"><span class="pt-step">6</span> DECODE — Ic array → reverse PT → y → W⁻¹ · y = x̂ → base-256 → decimal</div>
-  <div class="grid3">
-    <!-- Steps -->
-    <div>
-      <div class="flow-line" id="decode-flow"></div>
-    </div>
-    <!-- Results -->
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div class="metric">
-        <div class="metric-val glow-g" style="color:var(--acc2);" id="res-dec">312</div>
-        <div class="metric-lbl">Decoded decimal</div>
+    <div class="ph"><span class="ph-n">5</span>DECODE — Ic → W⁻¹ · y → base-256 → decimal</div>
+    <div class="g3">
+      <div class="codeblock" id="decode-flow" style="min-height:120px;"></div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="mc">
+          <div class="mc-v" style="color:var(--acc2);" id="res-dec">312</div>
+          <div class="mc-l">Decoded decimal</div>
+        </div>
+        <div class="mc">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--acc2);word-break:break-all;" id="res-bin">000100111000</div>
+          <div class="mc-l">Binary</div>
+        </div>
+        <div style="text-align:center;" id="rt-badge"></div>
+        <div class="mc">
+          <div class="mc-v" id="rmse-val" style="font-size:14px;">0.000</div>
+          <div class="mc-l">Reconstruction RMSE</div>
+        </div>
       </div>
-      <div class="metric">
-        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--acc2);word-break:break-all;" id="res-bin">000100111000</div>
-        <div class="metric-lbl">Binary output</div>
+      <div>
+        <div style="font-size:8px;color:var(--t2);margin-bottom:5px;font-family:var(--font-mono);">Round-trip detail</div>
+        <div id="rt-verify" class="codeblock" style="font-size:8px;min-height:100px;"></div>
       </div>
-      <div id="rt-badge" style="text-align:center;"></div>
-    </div>
-    <!-- Round-trip -->
-    <div>
-      <div style="font-size:9px;color:var(--t2);margin-bottom:5px;font-family:'Share Tech Mono',monospace;">Round-trip verification</div>
-      <div id="rt-verify" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--t1);line-height:2.1;background:var(--p0);border-radius:4px;padding:8px 10px;"></div>
     </div>
   </div>
-</div>
 
-<!-- STEP 7: METRICS -->
-<div class="panel" style="background:var(--p0);">
-  <div class="pt"><span class="pt-step">7</span> COMPUTE CAPACITY — W-OWCU vs binary serial</div>
-  <div id="metrics" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;"></div>
-</div>
+  <!-- METRICS -->
+  <div class="panel" style="background:var(--s0);">
+    <div class="ph">COMPUTE METRICS</div>
+    <div id="metrics" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;"></div>
+  </div>
 
-<!-- CHANNEL INTENSITY DETAIL -->
-<div class="panel">
-  <div class="pt">λ CHANNEL INTENSITY — encoding digits → optical power → fiber mix</div>
-  <div id="ch-detail" style="display:flex;flex-direction:column;gap:5px;"></div>
-</div>
+</div><!-- /tab-live -->
 
-</div><!-- /wrap -->
+<!-- ── TAB: MATRIX / PHYSICS ─────────────────────── -->
+<div class="main" id="tab-matrix" style="display:none;">
+
+  <div class="g2">
+    <div class="panel">
+      <div class="ph"><span class="ph-n">W</span>WEIGHT MATRIX — click cell to cycle (0–4) &nbsp;|&nbsp; must be invertible</div>
+      <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:8px;color:var(--t2);margin-bottom:4px;font-family:var(--font-mono);">W (7×7)</div>
+          <div id="matrix-W"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:28px;font-size:16px;color:var(--t2);">×</div>
+        <div>
+          <div style="font-size:8px;color:var(--t2);margin-bottom:4px;font-family:var(--font-mono);">x (input)</div>
+          <div id="vec-x"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:28px;font-size:14px;font-weight:700;color:var(--acc);">=</div>
+        <div>
+          <div style="font-size:8px;color:var(--acc2);margin-bottom:4px;font-family:var(--font-mono);">y = W·x</div>
+          <div id="vec-y"></div>
+        </div>
+        <div>
+          <div style="font-size:8px;color:var(--acc3);margin-bottom:4px;font-family:var(--font-mono);">x̂ = W⁻¹·ỹ</div>
+          <div id="vec-xhat"></div>
+        </div>
+        <div style="flex:1;min-width:160px;">
+          <div style="font-size:8px;color:var(--t2);margin-bottom:4px;font-family:var(--font-mono);">Dot products y = W·x</div>
+          <div id="dot-detail" class="codeblock" style="max-height:160px;overflow-y:auto;font-size:8px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><span class="ph-n">W⁻¹</span>INVERSE MATRIX — computed via Gauss-Jordan</div>
+      <div id="matrix-Winv"></div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:8px;color:var(--t2);font-family:var(--font-mono);">det(W) =</span>
+        <span id="det-val" style="font-family:var(--font-mono);font-size:11px;color:var(--warn);">—</span>
+        <span id="inv-badge"></span>
+        <span style="font-size:8px;color:var(--t2);font-family:var(--font-mono);">cond(W) =</span>
+        <span id="cond-val" style="font-family:var(--font-mono);font-size:11px;color:var(--t1);">—</span>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn" onclick="newMatrix()">Generate invertible</button>
+        <button class="btn" onclick="identityMatrix()">Identity</button>
+        <button class="btn" onclick="diagonalMatrix()">Diagonal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Physics model -->
+  <div class="panel">
+    <div class="ph">PHYSICAL MODEL — optical power → PT current</div>
+    <div class="g3">
+      <div>
+        <div style="font-size:8px;color:var(--t2);margin-bottom:6px;font-family:var(--font-mono);">Encoding → Optical Power</div>
+        <div id="ch-detail"></div>
+      </div>
+      <div>
+        <div style="font-size:8px;color:var(--t2);margin-bottom:6px;font-family:var(--font-mono);">PT Transfer Function (hFE=150)</div>
+        <canvas id="tf-canvas" height="140"></canvas>
+      </div>
+      <div>
+        <div style="font-size:8px;color:var(--t2);margin-bottom:6px;font-family:var(--font-mono);">PT Output Currents (all channels)</div>
+        <canvas id="ic-canvas" height="140"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-matrix -->
+
+<!-- ── TAB: NOISE & NONLINEARITY ─────────────────── -->
+<div class="main" id="tab-noise" style="display:none;">
+
+  <div class="g2">
+    <div class="panel">
+      <div class="ph">NOISE MODEL — Gaussian additive noise on Ic</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="noise-section">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:9px;font-family:var(--font-mono);color:var(--t1);">σ (noise std)</span>
+            <span id="noise-disp" style="font-family:var(--font-mono);font-size:11px;color:var(--warn);">0.005</span>
+          </div>
+          <input class="sl" type="range" id="noise-sl2" min="0" max="0.15" step="0.001" value="0.005" oninput="syncNoise(this.value)">
+          <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:8px;color:var(--t2);font-family:var(--font-mono);">
+            <span>0 (ideal)</span><span>0.075</span><span>0.15 (severe)</span>
+          </div>
+        </div>
+        <div class="noise-section">
+          <div style="font-size:9px;font-family:var(--font-mono);color:var(--t1);margin-bottom:4px;">Nonlinearity model</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="btn" id="nl-none" onclick="setNL('none')" style="border-color:var(--acc);color:var(--acc);">Linear</button>
+            <button class="btn" id="nl-sat" onclick="setNL('sat')">Saturation</button>
+            <button class="btn" id="nl-relu" onclick="setNL('relu')">ReLU</button>
+            <button class="btn" id="nl-sigmoid" onclick="setNL('sigmoid')">Sigmoid</button>
+          </div>
+          <div id="nl-desc" class="codeblock" style="margin-top:6px;font-size:8px;"></div>
+        </div>
+        <div id="snr-display" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">NOISE SWEEP — RMSE vs σ (Monte Carlo N=50)</div>
+      <canvas id="noise-sweep" height="180"></canvas>
+      <button class="btn" onclick="runNoiseSweep()" style="margin-top:6px;">Run sweep</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">SIGNAL vs NOISY Ic — per channel overlay</div>
+    <canvas id="noise-overlay" height="160"></canvas>
+  </div>
+
+</div><!-- /tab-noise -->
+
+<!-- ── TAB: SEQUENCE ──────────────────────────────── -->
+<div class="main" id="tab-seq" style="display:none;">
+
+  <div class="panel">
+    <div class="ph">INPUT SEQUENCE — multi-value optical pipeline</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+      <input class="fi" type="number" id="seq-add-val" value="0" min="0" style="width:100px;">
+      <button class="btn primary" onclick="seqAddManual()">Add</button>
+      <button class="btn" onclick="seqAddRandom()">+ Random</button>
+      <button class="btn" onclick="seqFibonacci()">Fibonacci</button>
+      <button class="btn" onclick="seqPrimes()">Primes</button>
+      <button class="btn danger" onclick="seqClear()">Clear</button>
+      <button class="btn primary" onclick="runSequence()">▶ Run All</button>
+    </div>
+    <div id="seq-table" style="overflow-x:auto;"></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">SEQUENCE RESULTS — decoded values + error</div>
+    <canvas id="seq-chart" height="180"></canvas>
+    <div id="seq-summary" style="margin-top:8px;"></div>
+  </div>
+
+</div><!-- /tab-seq -->
+
+<!-- ── TAB: BENCHMARK ─────────────────────────────── -->
+<div class="main" id="tab-bench" style="display:none;">
+
+  <div class="panel">
+    <div class="ph">BENCHMARK CONFIGURATION</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <label>TRIALS (N)</label>
+        <input class="fi" type="number" id="bench-n" value="200" min="10" max="5000" style="width:90px;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <label>MAX INPUT</label>
+        <input class="fi" type="number" id="bench-max" value="100000" min="100" style="width:110px;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <label>NOISE σ</label>
+        <input class="fi" type="number" id="bench-noise" value="0.005" min="0" max="0.1" step="0.001" style="width:90px;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <label>NONLINEARITY</label>
+        <select class="fi" id="bench-nl" style="width:100px;">
+          <option value="none">Linear</option>
+          <option value="sat">Saturation</option>
+          <option value="relu">ReLU</option>
+          <option value="sigmoid">Sigmoid</option>
+        </select>
+      </div>
+      <button class="btn primary" onclick="runBenchmark()" style="height:28px;">▶ Run Benchmark</button>
+      <button class="btn" onclick="exportLog()">↓ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="panel">
+      <div class="ph">BENCHMARK RESULTS</div>
+      <div id="bench-metrics" class="g4" style="margin-bottom:10px;"></div>
+      <canvas id="bench-hist" height="160"></canvas>
+    </div>
+    <div class="panel">
+      <div class="ph">ERROR vs INPUT VALUE</div>
+      <canvas id="bench-scatter" height="200"></canvas>
+    </div>
+  </div>
+
+  <div id="bench-status" style="font-family:var(--font-mono);font-size:9px;color:var(--t2);padding:4px 0;"></div>
+
+</div><!-- /tab-bench -->
+
+<!-- ── TAB: LOG ───────────────────────────────────── -->
+<div class="main" id="tab-log" style="display:none;">
+  <div class="panel">
+    <div class="ph">COMPUTATION LOG</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <button class="btn" onclick="clearLog()">Clear</button>
+      <button class="btn" onclick="exportLog()">↓ CSV</button>
+      <span style="font-size:9px;color:var(--t2);margin-left:auto;font-family:var(--font-mono);" id="log-info"></span>
+    </div>
+    <div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
+      <table class="logtbl" id="log-table">
+        <thead>
+          <tr>
+            <th>#</th><th>CLK</th><th>INPUT</th><th>DECODED</th>
+            <th>RMSE</th><th>SNR(dB)</th><th>MATCH</th><th>NL</th><th>σ</th>
+          </tr>
+        </thead>
+        <tbody id="log-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /tab-log -->
+
+</div><!-- /app -->
 
 <script>
-// ============================================================
-//  CONSTANTS
-// ============================================================
-const BASE = 256;
-const CHANS = 7;
-const HFE = 150;
+/* ================================================================
+   CONSTANTS & STATE
+   ================================================================ */
+const BASE = 256, CHANS = 7, HFE = 150;
 const CHAN_NAMES = ['Red','Orange','Yellow','Green','Blue','Indigo','Violet'];
-const CHAN_HEX   = ['#ff4466','#ff7733','#ffe033','#44dd88','#33aaff','#8855ff','#cc66ff'];
-const CHAN_CSS   = ['--ch0','--ch1','--ch2','--ch3','--ch4','--ch5','--ch6'];
+const CHAN_HEX   = ['#ff3355','#ff6622','#ffd022','#22cc66','#2288ff','#7744ee','#bb44ff'];
 
-// ============================================================
-//  STATE
-// ============================================================
-let W = [];      // 7x7 weight matrix
-let xVec = [];   // encoded input
-let yVec = [];   // W·x result
-let clkN = 0;
-let currentVal = 312n;
+let state = {
+  W: [],        // 7×7 weight matrix
+  Winv: [],     // 7×7 inverse
+  det: 0,
+  cond: 0,
+  xVec: [],     // encoded input
+  yVec: [],     // W·x clean
+  yNoisy: [],   // W·x + noise + nonlinearity
+  xhat: [],     // W⁻¹·yNoisy
+  pt: [],       // phototransistor outputs
+  noise: 0.005,
+  nl: 'none',
+  currentVal: 312,
+  clk: 0,
+  log: [],
+  sequence: [],
+  seqResults: [],
+};
 
-// ============================================================
-//  MATRIX INIT
-// ============================================================
-function newMatrix(){
-  W = Array.from({length:CHANS},()=>
-    Array.from({length:CHANS},()=>Math.floor(Math.random()*4))
-  );
+/* ================================================================
+   MATH UTILITIES (pure functions)
+   ================================================================ */
+const Math2 = {
+  // Gauss-Jordan matrix inversion (n×n, returns null if singular)
+  invert(M) {
+    const n = M.length;
+    const A = M.map(r => [...r]);
+    const I = Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i===j?1:0));
+    for (let col = 0; col < n; col++) {
+      // Find pivot
+      let maxRow = col;
+      for (let row = col+1; row < n; row++)
+        if (Math.abs(A[row][col]) > Math.abs(A[maxRow][col])) maxRow = row;
+      [A[col], A[maxRow]] = [A[maxRow], A[col]];
+      [I[col], I[maxRow]] = [I[maxRow], I[col]];
+      const piv = A[col][col];
+      if (Math.abs(piv) < 1e-12) return null;
+      for (let j = 0; j < n; j++) { A[col][j] /= piv; I[col][j] /= piv; }
+      for (let row = 0; row < n; row++) {
+        if (row === col) continue;
+        const f = A[row][col];
+        for (let j = 0; j < n; j++) { A[row][j] -= f*A[col][j]; I[row][j] -= f*I[col][j]; }
+      }
+    }
+    return I;
+  },
+
+  // Determinant via LU decomposition
+  det(M) {
+    const n = M.length;
+    const A = M.map(r => [...r]);
+    let d = 1;
+    for (let col = 0; col < n; col++) {
+      let maxRow = col;
+      for (let row = col+1; row < n; row++)
+        if (Math.abs(A[row][col]) > Math.abs(A[maxRow][col])) maxRow = row;
+      if (maxRow !== col) { [A[col], A[maxRow]] = [A[maxRow], A[col]]; d *= -1; }
+      if (Math.abs(A[col][col]) < 1e-12) return 0;
+      d *= A[col][col];
+      for (let row = col+1; row < n; row++) {
+        const f = A[row][col] / A[col][col];
+        for (let j = col; j < n; j++) A[row][j] -= f * A[col][j];
+      }
+    }
+    return d;
+  },
+
+  // Condition number estimate (ratio of max/min singular values via power iteration approx)
+  condEst(M) {
+    // Use Frobenius norm ratio as estimate
+    const n = M.length;
+    const inv = Math2.invert(M);
+    if (!inv) return Infinity;
+    const fn = (X) => Math.sqrt(X.flat().reduce((s,v)=>s+v*v,0));
+    return fn(M) * fn(inv) / n;
+  },
+
+  matmul(A, x) {
+    return A.map(row => row.reduce((s,w,j)=>s+w*x[j], 0));
+  },
+
+  matvec(A, x) { return Math2.matmul(A, x); },
+
+  rmse(a, b) {
+    const n = a.length;
+    return Math.sqrt(a.reduce((s,v,i)=>s+(v-b[i])**2,0)/n);
+  },
+
+  snr(signal, noise) {
+    const ps = signal.reduce((s,v)=>s+v*v,0)/signal.length;
+    const pn = noise.reduce((s,v)=>s+v*v,0)/noise.length;
+    if (pn < 1e-20) return Infinity;
+    return 10*Math.log10(ps/pn);
+  },
+
+  clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); },
+};
+
+/* ================================================================
+   ENCODING / DECODING
+   ================================================================ */
+const Codec = {
+  encode(n) {
+    let d = [], v = Math.floor(n);
+    for (let i = 0; i < CHANS; i++) { d.push(v % BASE); v = Math.floor(v / BASE); }
+    return d;
+  },
+  decode(d) {
+    let val = 0;
+    for (let i = 0; i < d.length; i++) val += d[i] * Math.pow(BASE, i);
+    return Math.round(val);
+  },
+};
+
+/* ================================================================
+   PHYSICS MODEL
+   ================================================================ */
+const Physics = {
+  // y[i] → Ib → Ic (clean)
+  ptClean(y) {
+    return y.map(v => {
+      const ib = Math.max(0, v) * 0.00001;
+      const ic = ib * HFE;
+      const ie = ic + ib;
+      return { ib: +ib.toFixed(7), ic: +ic.toFixed(6), ie: +ie.toFixed(6), raw: v };
+    });
+  },
+  // Add Gaussian noise to Ic
+  addNoise(ic_arr, sigma) {
+    return ic_arr.map(ic => ic + (sigma > 0 ? Physics.randn() * sigma : 0));
+  },
+  // Apply nonlinearity to Ic
+  applyNL(ic_arr, nl) {
+    const maxIc = Math.max(...ic_arr.map(Math.abs), 1e-9);
+    return ic_arr.map(v => {
+      switch(nl) {
+        case 'sat':     return maxIc * Math.tanh(v / maxIc);
+        case 'relu':    return Math.max(0, v);
+        case 'sigmoid': return maxIc / (1 + Math.exp(-6 * v / maxIc));
+        default:        return v;
+      }
+    });
+  },
+  // Recover y from noisy Ic (reverse PT: Ib = Ic/hFE, y = Ib/0.00001)
+  icToY(ic_arr) {
+    return ic_arr.map(ic => ic / (HFE * 0.00001));
+  },
+  randn() {
+    // Box-Muller
+    const u = 1 - Math.random(), v2 = Math.random();
+    return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v2);
+  },
+};
+
+/* ================================================================
+   INVERTIBLE MATRIX GENERATION
+   ================================================================ */
+const MatGen = {
+  // Generate a guaranteed-invertible integer-weight matrix
+  // Strategy: start from diagonal-dominant integer matrix
+  generate() {
+    let attempts = 0;
+    while (attempts++ < 200) {
+      const M = Array.from({length:CHANS}, () =>
+        Array.from({length:CHANS}, () => Math.floor(Math.random()*4))
+      );
+      // Ensure diagonal dominance: M[i][i] = sum of off-diag + 1
+      for (let i = 0; i < CHANS; i++) {
+        const offSum = M[i].reduce((s,v,j)=>j!==i?s+Math.abs(v):s, 0);
+        M[i][i] = offSum + 1 + Math.floor(Math.random()*3);
+      }
+      const d = Math2.det(M);
+      if (Math.abs(d) > 1e-6) return M;
+    }
+    return MatGen.identity();
+  },
+  identity() {
+    return Array.from({length:CHANS}, (_,i)=>Array.from({length:CHANS},(_,j)=>i===j?1:0));
+  },
+  diagonal() {
+    return Array.from({length:CHANS}, (_,i)=>Array.from({length:CHANS},(_,j)=>i===j?(i+1):0));
+  },
+};
+
+/* ================================================================
+   MAIN COMPUTE PIPELINE
+   ================================================================ */
+function compute(val, sigma, nl, W, Winv) {
+  const x   = Codec.encode(val);
+  const y   = Math2.matmul(W, x);          // W · x (clean)
+  const pt  = Physics.ptClean(y);
+  const ic_clean = pt.map(p => p.ic);
+
+  // Apply noise + nonlinearity on Ic
+  let ic_noisy = Physics.addNoise(ic_clean, sigma);
+  ic_noisy     = Physics.applyNL(ic_noisy, nl);
+
+  // Recover y from noisy Ic
+  const y_hat = Physics.icToY(ic_noisy);
+
+  // Apply W⁻¹ to recover x̂
+  const x_hat_f = Winv ? Math2.matmul(Winv, y_hat) : y_hat;
+
+  // Round x̂ to nearest integer, clamp to [0, 255]
+  const x_hat = x_hat_f.map(v => Math2.clamp(Math.round(v), 0, 255));
+
+  const decoded = Codec.decode(x_hat);
+  const rmse    = Math2.rmse(x, x_hat_f);
+  const noise   = ic_clean.map((v,i)=>ic_noisy[i]-v);
+  const snr     = Math2.snr(ic_clean, noise);
+
+  return { x, y, pt, ic_clean, ic_noisy, y_hat, x_hat_f, x_hat, decoded, rmse, snr };
+}
+
+/* ================================================================
+   STATE UPDATE
+   ================================================================ */
+function run() {
+  const val   = state.currentVal;
+  const sigma = state.noise;
+  const nl    = state.nl;
+
+  const result = compute(val, sigma, nl, state.W, state.Winv);
+  state.xVec   = result.x;
+  state.yVec   = result.y;
+  state.xhat   = result.x_hat;
+  state.pt     = result.pt;
+
+  state.clk++;
+  const match = result.decoded === val;
+
+  // Log entry
+  const entry = {
+    n: state.log.length + 1,
+    clk: state.clk,
+    input: val,
+    decoded: result.decoded,
+    rmse: result.rmse,
+    snr: isFinite(result.snr) ? result.snr : 999,
+    match,
+    nl,
+    sigma,
+  };
+  state.log.push(entry);
+  if (state.log.length > 1000) state.log.shift();
+
+  updateClk(result.snr);
+  renderAllLive(result);
+  renderMatrixTab(result);
+  renderNoiseTab(result);
+  renderLogCount();
+}
+
+/* ================================================================
+   MATRIX MANAGEMENT
+   ================================================================ */
+function newMatrix() {
+  state.W    = MatGen.generate();
+  state.Winv = Math2.invert(state.W);
+  state.det  = Math2.det(state.W);
+  state.cond = Math2.condEst(state.W);
   run();
 }
-newMatrix();
+function identityMatrix() { state.W=MatGen.identity(); state.Winv=MatGen.identity(); state.det=1; state.cond=1; run(); }
+function diagonalMatrix() { state.W=MatGen.diagonal(); state.Winv=Math2.invert(state.W); state.det=Math2.det(state.W); state.cond=Math2.condEst(state.W); run(); }
+function cycleW(i,j) { state.W[i][j]=(state.W[i][j]+1)%5; state.Winv=Math2.invert(state.W); state.det=Math2.det(state.W); state.cond=Math2.condEst(state.W); run(); }
 
-// ============================================================
-//  ENCODING / DECODING  (BigInt safe)
-// ============================================================
-function encode(n){
-  let d=[];
-  let v=BigInt(n);
-  const B=BigInt(BASE);
-  for(let i=0;i<CHANS;i++){d.push(Number(v%B));v=v/B;}
-  return d;
+/* ================================================================
+   INPUT HANDLING
+   ================================================================ */
+function fromDecimal() {
+  const v = parseInt(document.getElementById('dec-in').value) || 0;
+  state.currentVal = Math.max(0, v);
+  run();
 }
-function decodeVec(d){
-  let val=BigInt(0);
-  const B=BigInt(BASE);
-  for(let i=0;i<d.length;i++) val+=BigInt(d[i])*B**BigInt(i);
-  return val;
+function randomInput() { state.currentVal=Math.floor(Math.random()*100000); document.getElementById('dec-in').value=state.currentVal; run(); }
+function clearInput() { state.currentVal=0; document.getElementById('dec-in').value=0; run(); }
+function updateNoise() {
+  const v = parseFloat(document.getElementById('noise-sl').value);
+  document.getElementById('noise-val').textContent = v.toFixed(3);
+  state.noise = v;
+  syncNoiseSl2(v);
+  run();
 }
-function matmul(W,x){
-  return W.map(row=>row.reduce((s,w,j)=>s+w*x[j],0));
+function syncNoise(v) {
+  v = parseFloat(v);
+  state.noise = v;
+  document.getElementById('noise-sl').value = v;
+  document.getElementById('noise-val').textContent = v.toFixed(3);
+  run();
 }
-function phototransistor(v){
-  return v.map(val=>{
-    const ib=val*0.00001;
-    const ic=ib*HFE;
-    const ie=ic+ib;
-    return{ib:+ib.toFixed(6),ic:+ic.toFixed(5),ie:+ie.toFixed(5),raw:val};
+function syncNoiseSl2(v) {
+  const sl = document.getElementById('noise-sl2');
+  if (sl) sl.value = v;
+  const d = document.getElementById('noise-disp');
+  if (d) d.textContent = v.toFixed(3);
+}
+function setNL(nl) {
+  state.nl = nl;
+  document.getElementById('nl-sel').value = nl;
+  ['none','sat','relu','sigmoid'].forEach(k => {
+    const el = document.getElementById('nl-'+k);
+    if (el) { el.style.borderColor = k===nl?'var(--acc)':''; el.style.color = k===nl?'var(--acc)':''; }
   });
-}
-// Recover x from y: simple row-by-row residual (assumes W is designed s.t. decode works)
-// For display: show y directly and also try inverse via diagonal dominance if possible
-function tryDecode(y, W, original_x){
-  // For simulator clarity: we show y and the original encoding round-trip separately
-  return {y, encoded:original_x};
-}
-
-// ============================================================
-//  INPUT HANDLING
-// ============================================================
-function fromDecimal(){
-  const v=parseInt(document.getElementById('dec-in').value)||0;
-  currentVal=BigInt(v<0?0:v);
-  run();
-}
-function fromBigInt(n){
-  currentVal=n<0n?0n:n;
-  document.getElementById('dec-in').value=currentVal.toString();
-  run();
-}
-function randomInput(){
-  const v=BigInt(Math.floor(Math.random()*100000));
-  fromBigInt(v);
-}
-function clearInput(){fromBigInt(0n);}
-function setRadix(r){
-  document.getElementById('r256').classList.toggle('active',r===256);
-  document.getElementById('r16').classList.toggle('active',r===16);
+  const descs = {
+    none:'f(Ic) = Ic  — ideal linear response',
+    sat: 'f(Ic) = Ic_max · tanh(Ic / Ic_max)  — saturation at high power',
+    relu:'f(Ic) = max(0, Ic)  — rectification (photo-current clamp)',
+    sigmoid:'f(Ic) = Ic_max / (1 + e^{-6·Ic/Ic_max})  — soft sigmoid activation',
+  };
+  const d = document.getElementById('nl-desc');
+  if (d) d.textContent = descs[nl] || '';
   run();
 }
 
-// ============================================================
-//  RENDER BITS
-// ============================================================
-function renderBits(n){
-  const bits=Number(n).toString(2).padStart(24,'0').split('').map(Number);
-  document.getElementById('bit-grid').innerHTML=
-    bits.map((b,i)=>`<div class="bbit" onclick="toggleBit(${i},${bits.join('')})"
-      style="background:${b?'rgba(46,143,255,.2)':'transparent'};
-      color:${b?'#7aacff':'var(--t2)'};
-      border:1px solid ${b?'#2e8fff':'var(--b0)'};
-      box-shadow:${b?'0 0 6px rgba(46,143,255,.3)':'none'};">${b}</div>`).join('');
+/* ================================================================
+   RENDER: LIVE TAB
+   ================================================================ */
+function renderAllLive(result) {
+  const { x, y, pt, ic_clean, ic_noisy, x_hat_f, x_hat, decoded, rmse, snr } = result;
+  const val = state.currentVal;
+  const match = decoded === val;
+
+  // Header
+  document.getElementById('dec-disp').textContent = val.toLocaleString();
+  document.getElementById('hex-disp').textContent = '0x' + val.toString(16).toUpperCase();
+  renderBits(val);
+  renderEncoding(x);
+  renderFibers(x, y, ic_noisy);
+  renderPT(pt, ic_noisy);
+  renderDecode(result);
+  renderMetrics(val, x, rmse, snr);
 }
-function toggleBit(i,_){
-  const n=Number(currentVal);
-  const bit=1<<(23-i);
-  currentVal=BigInt((n&bit)?n&~bit:n|bit);
-  document.getElementById('dec-in').value=currentVal.toString();
+
+function renderBits(n) {
+  const bits = (n >>> 0).toString(2).padStart(24,'0').split('').map(Number);
+  document.getElementById('bit-grid').innerHTML =
+    bits.map((b,i) => `<div class="bbit" onclick="toggleBit(${i})"
+      style="background:${b?'rgba(29,122,255,.2)':'transparent'};
+      color:${b?'#5599ff':'var(--t2)'};
+      border:1px solid ${b?'var(--acc)':'var(--b1)'};">${b}</div>`).join('');
+}
+function toggleBit(i) {
+  const bit = 1 << (23-i);
+  state.currentVal = (state.currentVal & bit) ? state.currentVal & ~bit : state.currentVal | bit;
+  document.getElementById('dec-in').value = state.currentVal;
   run();
 }
 
-// ============================================================
-//  RENDER ENCODING GRID
-// ============================================================
-function renderEncoding(d){
-  const active=d.filter(v=>v>0).length;
-  document.getElementById('enc-active').textContent=active;
-  document.getElementById('enc-grid').innerHTML=d.map((v,i)=>{
-    const pct=Math.round(v/255*100);
-    const on=v>0;
-    const col=CHAN_HEX[i];
-    return`<div class="ch-bar">
-      <div style="width:7px;height:7px;border-radius:50%;background:${col};${on?'box-shadow:0 0 5px '+col+'66':'opacity:.2'};flex-shrink:0;"></div>
-      <span style="font-size:9px;font-family:'Share Tech Mono',monospace;color:${on?col:'var(--t2)'};width:60px;">d${i}·256^${i}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col};opacity:${on?.85:.15};"></div></div>
-      <span style="font-size:10px;font-family:'Share Tech Mono',monospace;color:${on?col:'var(--t2)'};text-align:right;">${v}</span>
+function renderEncoding(x) {
+  const active = x.filter(v=>v>0).length;
+  document.getElementById('enc-active').textContent = active;
+  document.getElementById('enc-grid').innerHTML = x.map((v,i) => {
+    const on = v > 0, pct = Math.round(v/255*100), col = CHAN_HEX[i];
+    return `<div class="chrow">
+      <div style="width:7px;height:7px;border-radius:50%;background:${col};${on?'box-shadow:0 0 5px '+col+'66':'opacity:.2'}"></div>
+      <span style="font-family:var(--font-mono);font-size:9px;color:${on?col:'var(--t2)'};">d${i}·256^${i}</span>
+      <div class="bar-t"><div class="bar-f" style="width:${pct}%;background:${col};opacity:${on?.85:.15};"></div></div>
+      <span style="font-family:var(--font-mono);font-size:9px;color:${on?col:'var(--t2)'};">${v}</span>
       <span style="font-size:8px;color:var(--t2);">/255</span>
-      <span style="font-size:8px;padding:1px 6px;border-radius:2px;background:${on?'rgba(46,143,255,.1)':'transparent'};color:${on?'var(--acc)':'var(--t2)'};border:1px solid ${on?'var(--acc)':'transparent'};">${on?'ACTIVE':'idle'}</span>
-      <span style="font-size:8px;color:var(--t2);font-family:'Share Tech Mono',monospace;">${(v/255*3.3).toFixed(2)}V</span>
+      <span style="font-size:8px;font-family:var(--font-mono);padding:1px 5px;border-radius:2px;
+        background:${on?'rgba(29,122,255,.08)':'transparent'};color:${on?'var(--acc)':'var(--t2)'};
+        border:1px solid ${on?'var(--acc)':'transparent'};">${on?'d'+i+'='+v:'idle'}</span>
     </div>`;
   }).join('');
 }
 
-// ============================================================
-//  RENDER MATRIX
-// ============================================================
-function renderMatrix(d, y){
+function renderPT(pt, ic_noisy) {
+  const maxIc = Math.max(...pt.map(p=>p.ic), ...ic_noisy, 1e-12);
+  document.getElementById('pt-outputs').innerHTML = pt.map((p,i) => {
+    const col = CHAN_HEX[i];
+    const pNoisy = Math.round(ic_noisy[i]/maxIc*100);
+    const pClean = Math.round(p.ic/maxIc*100);
+    const delta = Math.abs(ic_noisy[i] - p.ic);
+    return `<div style="background:var(--s0);border:1px solid ${col}22;border-radius:3px;padding:5px 8px;margin-bottom:3px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+        <span style="font-size:8px;font-family:var(--font-mono);color:${col};">${CHAN_NAMES[i]} λ${i}</span>
+        <span style="font-size:10px;font-family:var(--font-mono);color:${col};">Ic=${p.ic.toFixed(5)} mA</span>
+        <span style="font-size:8px;font-family:var(--font-mono);color:var(--warn);">Δ=${delta.toFixed(5)}</span>
+      </div>
+      <div style="position:relative;height:6px;background:var(--b0);border-radius:2px;overflow:visible;">
+        <div style="height:100%;width:${pClean}%;background:${col};opacity:.5;border-radius:2px;"></div>
+        <div style="position:absolute;top:0;height:100%;width:${Math.max(0,Math.min(100,pNoisy))}%;
+          background:${col};border-radius:2px;opacity:.9;transition:width .2s;"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDecode(result) {
+  const { x, y, y_hat, x_hat_f, x_hat, decoded, rmse, snr } = result;
+  const val = state.currentVal, match = decoded === val;
+
+  document.getElementById('res-dec').textContent = decoded.toLocaleString();
+  document.getElementById('res-bin').textContent = (decoded>>>0).toString(2).padStart(24,'0');
+  document.getElementById('rmse-val').textContent = rmse.toFixed(6);
+  document.getElementById('rmse-val').style.color = rmse < 0.01 ? 'var(--ok)' : rmse < 1 ? 'var(--warn)' : 'var(--err)';
+
+  document.getElementById('decode-flow').textContent =
+    `1. Ic_noisy read by ADC\n` +
+    `   [${result.ic_noisy.map(v=>v.toFixed(5)).join(', ')}]\n\n` +
+    `2. Reverse PT: y_hat = Ic/(hFE·ε)\n` +
+    `   [${y_hat.map(v=>v.toFixed(2)).join(', ')}]\n\n` +
+    `3. Apply W⁻¹: x̂ = W⁻¹ · y_hat\n` +
+    `   raw: [${x_hat_f.map(v=>v.toFixed(3)).join(', ')}]\n` +
+    `   int: [${x_hat.join(', ')}]\n\n` +
+    `4. Base-256 → decimal\n` +
+    `   ${x_hat.map((v,i)=>`${v}·256^${i}`).join(' +\n   ')}\n   = ${decoded}`;
+
+  document.getElementById('rt-badge').innerHTML =
+    `<span class="badge ${match?'ok':'err'}">${match?'✓ EXACT ROUND-TRIP':'✗ MISMATCH'}</span>`;
+
+  document.getElementById('rt-verify').textContent =
+    `Input:       ${val}\n` +
+    `x (enc):     [${x.join(', ')}]\n` +
+    `y = W·x:     [${y.join(', ')}]\n` +
+    `y_hat (noisy):[${y_hat.map(v=>v.toFixed(2)).join(', ')}]\n` +
+    `x̂ (raw):    [${x_hat_f.map(v=>v.toFixed(3)).join(', ')}]\n` +
+    `x̂ (int):    [${x_hat.join(', ')}]\n` +
+    `Decoded:     ${decoded}\n` +
+    `RMSE:        ${rmse.toFixed(6)}\n` +
+    `SNR:         ${isFinite(snr)?snr.toFixed(1)+'dB':'∞ (no noise)'}\n` +
+    `Match:       ${match?'YES ✓':'NO ✗'}`;
+}
+
+function renderMetrics(val, x, rmse, snr) {
+  const active = x.filter(v=>v>0).length;
+  const bits = val > 0 ? Math.ceil(Math.log2(val+1)) : 1;
+  const items = [
+    {v:'256⁷−1', l:'Max capacity', s:'~72 quadrillion',c:'var(--acc)'},
+    {v:`${active}/7`, l:'Active λ', s:'channels firing', c:'var(--acc2)'},
+    {v:bits, l:'Bits equiv.', s:`for ${val.toLocaleString()}`, c:'#2288ff'},
+    {v:`${rmse.toFixed(4)}`, l:'Recon RMSE', s:'lower = better', c: rmse<0.01?'var(--ok)':rmse<1?'var(--warn)':'var(--err)'},
+    {v:isFinite(snr)?snr.toFixed(1)+'dB':'∞', l:'SNR', s:'signal-to-noise', c:'var(--warn)'},
+    {v:`${state.det?.toFixed(1)||'—'}`, l:'det(W)', s:'≠0 = invertible', c:Math.abs(state.det)>1e-6?'var(--ok)':'var(--err)'},
+  ];
+  document.getElementById('metrics').innerHTML = items.map(m =>
+    `<div class="mc"><div class="mc-v" style="color:${m.c};">${m.v}</div>
+     <div class="mc-l">${m.l}</div><div class="mc-s">${m.s}</div></div>`
+  ).join('');
+}
+
+/* ================================================================
+   RENDER: MATRIX TAB
+   ================================================================ */
+function renderMatrixTab(result) {
+  const { x, y, x_hat_f } = result;
+
   // W grid
-  const maxW=W.flat().reduce((m,v)=>Math.max(m,v),0)||1;
-  document.getElementById('matrix-W').innerHTML=
-    W.map((row,i)=>`<div style="display:flex;gap:2px;">${
-      row.map((v,j)=>{
-        const hot=d[j]>0&&v>0;
-        const int=Math.round(v/maxW*100);
-        return`<div class="m-cell" onclick="cycleW(${i},${j})"
-          style="background:${hot?`rgba(46,143,255,${.06+int*.006})`:'var(--p0)'};
+  if (!document.getElementById('tab-matrix').offsetParent && document.getElementById('tab-matrix').style.display==='none') return;
+  const maxW = Math.max(...state.W.flat(), 1);
+  document.getElementById('matrix-W').innerHTML =
+    state.W.map((row,i) => `<div style="display:flex;gap:2px;margin-bottom:2px;">${
+      row.map((v,j) => {
+        const hot = x[j]>0 && v>0;
+        return `<div class="mcell" onclick="cycleW(${i},${j})"
+          style="background:${hot?`rgba(29,122,255,${.04+v/maxW*.12})`:'var(--s0)'};
           color:${hot?'var(--acc)':'var(--t2)'};
-          border-color:${hot?'var(--acc)':'var(--b0)'};
-          box-shadow:${hot&&v>1?'inset 0 0 8px rgba(46,143,255,.15)':'none'};"
-          title="W[${i}][${j}]=${v} — click to cycle">${v}</div>`;
+          border-color:${hot?'rgba(29,122,255,.4)':'var(--b0)'};"
+          data-tip="W[${i}][${j}]=${v}">${v}</div>`;
       }).join('')
     }</div>`).join('');
 
-  // vec x
-  document.getElementById('vec-x').innerHTML=
-    d.map((v,i)=>`<div class="vec-row">
-      <span style="color:var(--t2);width:20px;">x${i}</span>
-      <div class="vec-val" style="background:${v>0?'rgba(46,143,255,.1)':'var(--p0)'};color:${v>0?'var(--acc)':'var(--t2)'};border-color:${v>0?'var(--acc)':'var(--b0)'};">${v}</div>
-    </div>`).join('');
+  // W⁻¹ grid
+  if (state.Winv) {
+    document.getElementById('matrix-Winv').innerHTML =
+      state.Winv.map(row => `<div style="display:flex;gap:2px;margin-bottom:2px;">${
+        row.map(v => `<div class="mcell" style="width:38px;font-size:8px;color:var(--acc3);border-color:var(--b0);background:var(--s0);">${v.toFixed(2)}</div>`).join('')
+      }</div>`).join('');
+  }
 
-  // vec y
-  const maxY=y.reduce((m,v)=>Math.max(m,Math.abs(v)),0)||1;
-  document.getElementById('vec-y').innerHTML=
-    y.map((v,i)=>{
-      const pct=Math.round(Math.abs(v)/maxY*100);
-      return`<div class="vec-row">
-        <span style="color:var(--t2);width:20px;">y${i}</span>
-        <div class="vec-val" style="background:rgba(0,229,160,${.04+pct*.006});color:var(--acc2);border-color:rgba(0,229,160,${.2+pct*.008});">${v}</div>
-      </div>`;
-    }).join('');
+  // det / cond
+  document.getElementById('det-val').textContent = state.det?.toExponential(3) || '—';
+  document.getElementById('det-val').style.color = Math.abs(state.det||0)>1e-6 ? 'var(--ok)' : 'var(--err)';
+  document.getElementById('inv-badge').innerHTML = state.Winv
+    ? `<span class="badge ok">INVERTIBLE</span>`
+    : `<span class="badge err">SINGULAR — cannot decode</span>`;
+  document.getElementById('cond-val').textContent = (state.cond||0).toFixed(2);
+  document.getElementById('cond-val').style.color = (state.cond||0)<10?'var(--ok)':(state.cond||0)<100?'var(--warn)':'var(--err)';
 
-  // dot products
-  document.getElementById('dot-detail').innerHTML=
-    W.map((row,i)=>{
-      const parts=row.map((w,j)=>`${w}·${d[j]}`).join('+');
-      return`y${i} = ${parts} = <b style="color:var(--acc2)">${y[i]}</b>`;
-    }).join('\n');
-}
-
-function cycleW(i,j){W[i][j]=(W[i][j]+1)%5;run();}
-
-// ============================================================
-//  RENDER PT OUTPUTS
-// ============================================================
-function renderPT(pt){
-  const maxIc=pt.reduce((m,p)=>Math.max(m,p.ic),0)||1;
-  document.getElementById('pt-outputs').innerHTML=
-    pt.map((p,i)=>{
-      const col=CHAN_HEX[i];
-      const pct=Math.round(p.ic/maxIc*100);
-      return`<div class="pt-card" style="border-color:${col}33;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <span style="font-size:8px;font-family:'Share Tech Mono',monospace;color:${col};">${CHAN_NAMES[i]}&nbsp;λ${i}</span>
-          <span style="font-size:11px;font-weight:700;font-family:'Share Tech Mono',monospace;color:${col};">Ic=${p.ic.toFixed(4)} mA</span>
+  // Vectors
+  const renderVec = (id, vals, col) => {
+    document.getElementById(id).innerHTML = vals.map((v,i) =>
+      `<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
+        <span style="font-size:8px;color:var(--t2);font-family:var(--font-mono);width:18px;">v${i}</span>
+        <div class="vval" style="background:${Math.abs(v)>0?`rgba(${col},.1)`:'var(--s0)'};
+          color:${Math.abs(v)>0?`rgb(${col})`:'var(--t2)'};
+          border-color:${Math.abs(v)>0?`rgba(${col},.3)`:'var(--b0)'};">
+          ${typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(2) : v}
         </div>
-        <div style="display:flex;gap:8px;font-size:8px;font-family:'Share Tech Mono',monospace;color:var(--t2);margin-bottom:4px;">
-          <span>Ib=${p.ib.toFixed(5)}</span><span>Ie=${p.ie.toFixed(4)}</span><span>y=${p.raw}</span>
-        </div>
-        <div style="height:3px;background:var(--b0);border-radius:2px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:${col};transition:width .2s;"></div>
-        </div>
-      </div>`;
-    }).join('');
-}
+      </div>`
+    ).join('');
+  };
+  renderVec('vec-x', x, '29,122,255');
+  renderVec('vec-y', y, '0,212,138');
+  renderVec('vec-xhat', x_hat_f.map(v=>+v.toFixed(3)), '255,92,58');
 
-// ============================================================
-//  DECODE + ROUND TRIP
-// ============================================================
-function renderDecode(originalVal, d, y, pt){
-  const orig = Number(originalVal);
-  const recon = Number(decodeVec(d));
-  const match = orig === recon;
+  document.getElementById('dot-detail').textContent =
+    state.W.map((row,i) => `y${i} = ${row.map((w,j)=>`${w}·${x[j]}`).join('+')} = ${y[i]}`).join('\n');
 
-  document.getElementById('res-dec').textContent = recon.toLocaleString();
-  document.getElementById('res-bin').textContent = recon.toString(2).padStart(24,'0');
-
-  // decode flow
-  const icVals = pt.map(p=>p.ic.toFixed(5));
-  document.getElementById('decode-flow').textContent =
-    `ADC reads Ic[] = [\n  ${icVals.join(',\n  ')}\n]\n\n` +
-    `→ recover y[i] = Ic[i] ÷ (hFE·ε)\n  where ε = 0.00001\n\n` +
-    `→ y = [${y.join(', ')}]\n\n` +
-    `→ x_enc = encoding of input\n  [${d.join(', ')}]\n\n` +
-    `→ base-256 → decimal:\n  ${d.map((v,i)=>`${v}×256^${i}`).join(' +\n  ')}\n  = ${recon}`;
-
-  document.getElementById('rt-verify').innerHTML =
-    `Input:      ${orig}\n` +
-    `Encoded:    [${d.join(', ')}]\n` +
-    `y = W·x:   [${y.join(', ')}]\n` +
-    `Decoded:    ${recon}\n` +
-    `Bits:       ${recon.toString(2).padStart(24,'0')}\n` +
-    `<span style="color:${match?'var(--acc2)':'var(--warn)'};">Match: ${match?'✓ EXACT ROUND-TRIP':'✗ MISMATCH'}</span>`;
-
-  document.getElementById('rt-badge').innerHTML =
-    `<span class="badge" style="background:${match?'rgba(0,229,160,.08)':'rgba(245,200,66,.08)'};color:${match?'var(--acc2)':'var(--warn)'};border:1px solid ${match?'var(--acc2)':'var(--warn)'};">
-      ${match?'✓ EXACT ROUND-TRIP':'✗ MISMATCH'}
-    </span>`;
-}
-
-// ============================================================
-//  METRICS
-// ============================================================
-function renderMetrics(n, d){
-  const active=d.filter(v=>v>0).length;
-  const bitsNeeded=n>0?Math.ceil(Math.log2(n+1)):1;
-  const items=[
-    {l:'Max per pulse',v:'256⁷−1',sub:'~72 quadrillion',c:'var(--acc)'},
-    {l:'Equiv. base-2 bits',v:'~56 bits',sub:'per optical pulse',c:'var(--acc2)'},
-    {l:'Active λ channels',v:`${active} / 7`,sub:'firing this pulse',c:'var(--warn)'},
-    {l:'Binary bits needed',v:bitsNeeded,sub:`for ${n.toLocaleString()}`,c:'#33aaff'},
-    {l:'Matrix ops/pulse',v:'49',sub:'7×7 dot products',c:'#cc66ff'},
-    {l:'Serial steps saved',v:Math.max(1,bitsNeeded-1),sub:'vs bit-serial',c:'#ff7733'},
-  ];
-  document.getElementById('metrics').innerHTML=items.map(m=>`
-    <div class="metric">
-      <div class="metric-val" style="color:${m.c};">${m.v}</div>
-      <div class="metric-lbl">${m.l}</div>
-      <div class="metric-sub">${m.sub}</div>
-    </div>`).join('');
-}
-
-// ============================================================
-//  CHANNEL DETAIL
-// ============================================================
-function renderChanDetail(d){
-  document.getElementById('ch-detail').innerHTML=CHAN_NAMES.map((nm,i)=>{
-    const v=d[i], on=v>0, col=CHAN_HEX[i];
-    const pct=Math.round(v/255*100);
-    return`<div class="ch-bar" style="grid-template-columns:8px 72px 1fr 36px 32px 60px 42px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${col};${on?'box-shadow:0 0 6px '+col:'opacity:.18'};"></div>
-      <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:${on?col:'var(--t2)'};">${nm}&nbsp;λ${i}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col};opacity:${on?.88:.15};"></div></div>
-      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:${on?col:'var(--t2)'};">${v}</span>
+  // Channel detail
+  document.getElementById('ch-detail').innerHTML = x.map((v,i) => {
+    const on = v>0, pct = Math.round(v/255*100), col = CHAN_HEX[i];
+    return `<div class="chrow">
+      <div style="width:7px;height:7px;border-radius:50%;background:${col};${on?'box-shadow:0 0 5px '+col+'66':'opacity:.2'}"></div>
+      <span style="font-family:var(--font-mono);font-size:9px;color:${on?col:'var(--t2)'};">${CHAN_NAMES[i]}</span>
+      <div class="bar-t"><div class="bar-f" style="width:${pct}%;background:${col};opacity:${on?.85:.15};"></div></div>
+      <span style="font-family:var(--font-mono);font-size:9px;color:${on?col:'var(--t2)'};">${v}</span>
       <span style="font-size:8px;color:var(--t2);">/255</span>
-      <span style="font-size:8px;font-family:'Share Tech Mono',monospace;color:${on?'var(--acc)':'var(--t2)'};padding:1px 6px;background:${on?'rgba(46,143,255,.08)':'transparent'};border:1px solid ${on?'var(--acc)':'transparent'};border-radius:2px;">${on?'d'+i+'='+v:'idle'}</span>
-      <span style="font-size:8px;font-family:'Share Tech Mono',monospace;color:var(--t2);">${(v/255*3.3).toFixed(2)}V</span>
+      <span style="font-size:8px;color:var(--t2);font-family:var(--font-mono);">${(v/255*3.3).toFixed(2)}V</span>
     </div>`;
   }).join('');
+
+  drawTFCanvas(result);
+  drawIcCanvas(result);
 }
 
-// ============================================================
-//  FIBER CANVAS
-// ============================================================
-function drawFibers(d, y){
-  const c=document.getElementById('fib-canvas');
-  if(!c)return;
-  const W2=c.offsetWidth||480, H=200;
-  c.width=W2;c.height=H;
-  const ctx=c.getContext('2d');
+/* ================================================================
+   RENDER: NOISE TAB
+   ================================================================ */
+function renderNoiseTab(result) {
+  if (document.getElementById('tab-noise').style.display==='none') return;
+  const { ic_clean, ic_noisy, snr } = result;
+  document.getElementById('noise-disp').textContent = state.noise.toFixed(3);
+  const snrStr = isFinite(snr) ? snr.toFixed(1)+' dB' : '∞';
+  document.getElementById('snr-display').innerHTML = [
+    {l:'SNR', v:snrStr, c:isFinite(snr)?snr>30?'var(--ok)':snr>10?'var(--warn)':'var(--err)':'var(--ok)'},
+    {l:'σ', v:state.noise.toFixed(4), c:'var(--warn)'},
+    {l:'Max noise', v:Math.max(...ic_clean.map((v,i)=>Math.abs(ic_noisy[i]-v))).toExponential(2), c:'var(--acc3)'},
+  ].map(m=>`<div class="mc"><div class="mc-v" style="font-size:14px;color:${m.c};">${m.v}</div><div class="mc-l">${m.l}</div></div>`).join('');
+  drawNoiseOverlay(ic_clean, ic_noisy);
+}
 
-  // Background
-  ctx.fillStyle='#030609';ctx.fillRect(0,0,W2,H);
-  // Grid
-  ctx.strokeStyle='#0a0f1a';ctx.lineWidth=.5;
-  for(let x=0;x<W2;x+=36){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let yy=0;yy<H;yy+=24){ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(W2,yy);ctx.stroke();}
+/* ================================================================
+   FIBER CANVAS
+   ================================================================ */
+function renderFibers(x, y, ic_noisy) {
+  const c = document.getElementById('fib-canvas');
+  if (!c) return;
+  const W2 = c.offsetWidth || 480, H = 200;
+  c.width = W2; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#030609'; ctx.fillRect(0,0,W2,H);
+  // grid
+  ctx.strokeStyle = '#090e1a'; ctx.lineWidth = .5;
+  for (let x2=0; x2<W2; x2+=36) { ctx.beginPath(); ctx.moveTo(x2,0); ctx.lineTo(x2,H); ctx.stroke(); }
+  for (let y2=0; y2<H; y2+=24) { ctx.beginPath(); ctx.moveTo(0,y2); ctx.lineTo(W2,y2); ctx.stroke(); }
 
-  const sx=20, mixX=W2*.45, ptX=W2-30;
-  const srcY=CHAN_NAMES.map((_,i)=>16+i*(H-24)/6);
-  const midY=H/2;
+  const sx=18, mixX=W2*.44, ptX=W2-28;
+  const srcY = CHAN_NAMES.map((_,i) => 16 + i*(H-24)/6);
+  const midY = H/2;
 
-  // Source beams
-  CHAN_NAMES.forEach((nm,i)=>{
-    const t=d[i]/255; if(t<.004)return;
-    const col=CHAN_HEX[i];
-    const yy=srcY[i];
-    ctx.save();
-    ctx.globalAlpha=.15+t*.75;ctx.strokeStyle=col;
-    ctx.lineWidth=.8+t*2.5;ctx.shadowColor=col;ctx.shadowBlur=t*14;
-    ctx.beginPath();ctx.moveTo(sx+10,yy);
-    ctx.bezierCurveTo(sx+70,yy,mixX-60,midY,mixX-14,midY);
-    ctx.stroke();ctx.restore();
+  // Input fibers
+  CHAN_NAMES.forEach((_,i) => {
+    const t = x[i]/255; if (t < .004) return;
+    const col = CHAN_HEX[i];
+    ctx.save(); ctx.globalAlpha=.12+t*.75; ctx.strokeStyle=col;
+    ctx.lineWidth=.8+t*2.5; ctx.shadowColor=col; ctx.shadowBlur=t*14;
+    ctx.beginPath(); ctx.moveTo(sx+10, srcY[i]);
+    ctx.bezierCurveTo(sx+60, srcY[i], mixX-60, midY, mixX-14, midY);
+    ctx.stroke(); ctx.restore();
   });
 
-  // Source dots
-  CHAN_NAMES.forEach((nm,i)=>{
-    const t=d[i]/255, col=CHAN_HEX[i], yy=srcY[i];
-    ctx.save();ctx.shadowColor=col;ctx.shadowBlur=t*20;
-    ctx.globalAlpha=.1+t*.9;ctx.fillStyle=col;
-    ctx.beginPath();ctx.arc(sx,yy,4+t*4,0,Math.PI*2);ctx.fill();
-    if(t>.02){ctx.fillStyle='#fff';ctx.globalAlpha=t*.8;ctx.beginPath();ctx.arc(sx,yy,1.5,0,Math.PI*2);ctx.fill();}
+  // Source nodes
+  CHAN_NAMES.forEach((_,i) => {
+    const t = x[i]/255, col = CHAN_HEX[i];
+    ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=t*18;
+    ctx.fillStyle=col; ctx.globalAlpha=.12+t*.88;
+    ctx.beginPath(); ctx.arc(sx, srcY[i], 4+t*3.5, 0, Math.PI*2); ctx.fill();
+    if (t>.02) { ctx.fillStyle='#fff'; ctx.globalAlpha=t*.7; ctx.beginPath(); ctx.arc(sx,srcY[i],1.5,0,Math.PI*2); ctx.fill(); }
     ctx.restore();
-    ctx.globalAlpha=1;ctx.font=`bold 7px Share Tech Mono,monospace`;
-    ctx.fillStyle=t>.02?col+'cc':'#1a2235';
-    ctx.fillText(`${nm[0]}:${d[i]}`,sx+12,yy+2.5);
+    ctx.globalAlpha=1; ctx.font='bold 7px IBM Plex Mono,monospace';
+    ctx.fillStyle = t>.02 ? col+'cc' : '#1e3050';
+    ctx.fillText(`${CHAN_NAMES[i][0]}:${x[i]}`, sx+11, srcY[i]+2.5);
   });
 
-  // Mix point color
-  let mr=0,mg=0,mb=0, tot=0;
-  CHAN_NAMES.forEach((nm,i)=>{
-    const t=d[i]/255;
-    mr+=parseInt(CHAN_HEX[i].slice(1,3),16)*t;
-    mg+=parseInt(CHAN_HEX[i].slice(3,5),16)*t;
-    mb+=parseInt(CHAN_HEX[i].slice(5,7),16)*t;
-    tot+=d[i];
+  // Mix node color
+  let mr=0, mg=0, mb=0, tot=0;
+  CHAN_NAMES.forEach((_,i) => {
+    const t = x[i]/255;
+    mr += parseInt(CHAN_HEX[i].slice(1,3),16)*t;
+    mg += parseInt(CHAN_HEX[i].slice(3,5),16)*t;
+    mb += parseInt(CHAN_HEX[i].slice(5,7),16)*t;
+    tot += x[i];
   });
-  const avgI=tot/(255*7);
-  const ms=Math.min(1,200/Math.max(mr,mg,mb,1));
-  const mc=tot>0?`rgb(${Math.round(mr*ms)},${Math.round(mg*ms)},${Math.round(mb*ms)})`:'#162030';
+  const avgI = tot/(255*7);
+  const ms = Math.min(1, 200/Math.max(mr,mg,mb,1));
+  const mc = tot>0 ? `rgb(${Math.round(mr*ms)},${Math.round(mg*ms)},${Math.round(mb*ms)})` : '#152030';
 
-  // Mix node
-  ctx.save();ctx.shadowColor=mc;ctx.shadowBlur=22*avgI;
-  ctx.fillStyle=mc;ctx.globalAlpha=.2+avgI*.4;
-  ctx.beginPath();ctx.arc(mixX,midY,18,0,Math.PI*2);ctx.fill();ctx.restore();
-  ctx.fillStyle=mc;ctx.globalAlpha=.7+avgI*.3;
-  ctx.beginPath();ctx.arc(mixX,midY,10,0,Math.PI*2);ctx.fill();
-  ctx.globalAlpha=1;ctx.fillStyle='#fff';ctx.font='bold 7px Share Tech Mono,monospace';
-  ctx.textAlign='center';ctx.fillText('MIX',mixX,midY+2.5);ctx.textAlign='left';
+  ctx.save(); ctx.shadowColor=mc; ctx.shadowBlur=24*avgI;
+  ctx.fillStyle=mc; ctx.globalAlpha=.18+avgI*.4;
+  ctx.beginPath(); ctx.arc(mixX,midY,20,0,Math.PI*2); ctx.fill(); ctx.restore();
+  ctx.fillStyle=mc; ctx.globalAlpha=.65+avgI*.3;
+  ctx.beginPath(); ctx.arc(mixX,midY,11,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.font='bold 7px IBM Plex Mono,monospace';
+  ctx.textAlign='center'; ctx.fillText('MIX',mixX,midY+2.5); ctx.textAlign='left';
 
-  // Fiber to PT array
-  const ptCols=['#4488ff','#66aaff','#88bbff','#44dd88','#ffaa33','#cc55ff','#ff4466'];
-  CHAN_NAMES.forEach((_,i)=>{
-    const t=Math.abs(y[i])/(Math.max(...y.map(Math.abs))||1);
-    if(t<.005)return;
-    const ty2=srcY[i];
-    ctx.save();ctx.globalAlpha=.15+t*.7;ctx.strokeStyle=CHAN_HEX[i];
-    ctx.lineWidth=.6+t*2;ctx.shadowColor=CHAN_HEX[i];ctx.shadowBlur=t*10;
-    ctx.beginPath();ctx.moveTo(mixX+14,midY);
-    ctx.bezierCurveTo(mixX+60,midY,ptX-50,ty2,ptX-12,ty2);
-    ctx.stroke();ctx.restore();
+  // Output fibers (y-weighted, noisy)
+  const maxIc = Math.max(...ic_noisy.map(Math.abs), 1e-9);
+  CHAN_NAMES.forEach((_,i) => {
+    const t = Math.abs(ic_noisy[i])/maxIc;
+    if (t<.005) return;
+    ctx.save(); ctx.globalAlpha=.12+t*.7; ctx.strokeStyle=CHAN_HEX[i];
+    ctx.lineWidth=.6+t*2.2; ctx.shadowColor=CHAN_HEX[i]; ctx.shadowBlur=t*10;
+    ctx.beginPath(); ctx.moveTo(mixX+14, midY);
+    ctx.bezierCurveTo(mixX+60, midY, ptX-50, srcY[i], ptX-12, srcY[i]);
+    ctx.stroke(); ctx.restore();
   });
 
   // PT block
-  ctx.fillStyle='#101830';ctx.strokeStyle='#4455aa';ctx.lineWidth=.8;
-  rrect(ctx,ptX-10,4,42,H-8,5);ctx.fill();ctx.stroke();
-  ctx.fillStyle='#8899cc';ctx.font='bold 7px Share Tech Mono,monospace';
-  ctx.textAlign='center';ctx.fillText('PT×7',ptX+11,midY+2.5);ctx.textAlign='left';
-
-  CHAN_NAMES.forEach((_,i)=>{
-    const yy2=srcY[i];
-    const t=Math.abs(y[i])/(Math.max(...y.map(Math.abs))||1);
-    const col=CHAN_HEX[i];
-    ctx.beginPath();ctx.arc(ptX-12,yy2,2.5,0,Math.PI*2);
-    ctx.fillStyle=col;ctx.globalAlpha=.2+t*.8;ctx.fill();
-    ctx.globalAlpha=1;ctx.fillStyle=col;
-    ctx.font='6px Share Tech Mono,monospace';
-    ctx.fillText(`y${i}`,ptX+14,yy2+2);
+  ctx.fillStyle='#0d1828'; ctx.strokeStyle='#2a3a70'; ctx.lineWidth=.8;
+  rrect(ctx, ptX-10, 4, 38, H-8, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#6677bb'; ctx.font='bold 7px IBM Plex Mono,monospace';
+  ctx.textAlign='center'; ctx.fillText('PT×7', ptX+9, midY+2.5); ctx.textAlign='left';
+  CHAN_NAMES.forEach((_,i) => {
+    const t = Math.abs(ic_noisy[i])/maxIc;
+    ctx.beginPath(); ctx.arc(ptX-12, srcY[i], 2.5, 0, Math.PI*2);
+    ctx.fillStyle=CHAN_HEX[i]; ctx.globalAlpha=.2+t*.8; ctx.fill();
+    ctx.globalAlpha=1; ctx.fillStyle=CHAN_HEX[i];
+    ctx.font='6px IBM Plex Mono,monospace';
+    ctx.fillText(`y${i}`, ptX+12, srcY[i]+2);
   });
 }
 
@@ -764,41 +1250,462 @@ function rrect(ctx,x,y,w,h,r){
   ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
 
-// ============================================================
-//  MAIN RUN
-// ============================================================
-function run(){
-  clkN++;
-  document.getElementById('clk-txt').textContent='CLK '+clkN;
+/* ================================================================
+   TF CANVAS & IC CANVAS
+   ================================================================ */
+function drawTFCanvas(result) {
+  const c = document.getElementById('tf-canvas'); if(!c) return;
+  const W2=c.offsetWidth||220, H=140; c.width=W2; c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--s0').trim()||'#07090f';
+  ctx.fillRect(0,0,W2,H);
+  // axes
+  ctx.strokeStyle='#182840'; ctx.lineWidth=.5;
+  const pad=22;
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(W2-4,H-pad); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(pad,4); ctx.stroke();
+  ctx.fillStyle='#304868'; ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillText('Ib→',W2-18,H-pad-2); ctx.fillText('Ic↑',pad+2,10);
 
-  const n=Number(currentVal);
-  const d=encode(n);
-  const yResult=matmul(W,d);
-  const pt=phototransistor(yResult);
-
-  document.getElementById('dec-disp').textContent=n.toLocaleString();
-  document.getElementById('hex-disp').textContent='0x'+n.toString(16).toUpperCase();
-
-  renderBits(n);
-  renderEncoding(d);
-  renderMatrix(d,yResult);
-  renderPT(pt);
-  renderDecode(currentVal,d,yResult,pt);
-  renderMetrics(n,d);
-  renderChanDetail(d);
-  drawFibers(d,yResult);
+  const maxIb = 14*0.00001;
+  const colors = {'none':'#2288ff','sat':'#ff6622','relu':'#22cc66','sigmoid':'#ffd022'};
+  const nls = ['none','sat','relu','sigmoid'];
+  nls.forEach(nl => {
+    ctx.beginPath(); ctx.strokeStyle=colors[nl]; ctx.lineWidth=nl===state.nl?2:.8;
+    ctx.globalAlpha=nl===state.nl?1:.35;
+    for (let s=0; s<=60; s++) {
+      const ib=s/60*maxIb, ic_c=ib*HFE;
+      const ic_nl = Physics.applyNL([ic_c],nl)[0];
+      const px=pad+(s/60)*(W2-pad-4), py=H-pad-(ic_nl/( maxIb*HFE+1e-14))*(H-pad-8);
+      s===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    ctx.stroke(); ctx.globalAlpha=1;
+  });
+  // legend
+  nls.forEach((nl,i)=>{
+    ctx.fillStyle=colors[nl]; ctx.fillRect(pad+2, 14+i*10, 8, 4);
+    ctx.fillStyle=colors[nl]; ctx.font='6px IBM Plex Mono,monospace';
+    ctx.fillText(nl, pad+12, 18+i*10);
+  });
 }
 
-// Responsive canvas
-const ro=new ResizeObserver(()=>{
-  const d=encode(Number(currentVal));
-  const y=matmul(W,d);
-  drawFibers(d,y);
-});
-ro.observe(document.body);
+function drawIcCanvas(result) {
+  const c = document.getElementById('ic-canvas'); if(!c) return;
+  const W2=c.offsetWidth||220, H=140; c.width=W2; c.height=H;
+  const ctx=c.getContext('2d');
+  const bg = getComputedStyle(document.body).getPropertyValue('--s0').trim()||'#07090f';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W2,H);
+  const pad=20;
+  const { ic_clean, ic_noisy } = result;
+  const maxV = Math.max(...ic_clean, ...ic_noisy, 1e-12);
+  const bw = (W2-pad-4)/CHANS;
+  CHAN_NAMES.forEach((_,i)=>{
+    const x0=pad+i*bw+2;
+    // clean bar
+    const hc=Math.max(0,(ic_clean[i]/maxV)*(H-pad-4));
+    ctx.fillStyle=CHAN_HEX[i]; ctx.globalAlpha=.35;
+    ctx.fillRect(x0, H-pad-hc, bw-6, hc);
+    // noisy bar
+    const hn=Math.max(0,(ic_noisy[i]/maxV)*(H-pad-4));
+    ctx.globalAlpha=.85;
+    ctx.fillRect(x0+2, H-pad-hn, bw-10, hn);
+    ctx.globalAlpha=1;
+    ctx.fillStyle=CHAN_HEX[i]; ctx.font='6px IBM Plex Mono,monospace';
+    ctx.textAlign='center'; ctx.fillText(i, x0+bw/2-3, H-pad+8);
+  });
+  ctx.textAlign='left';
+  ctx.fillStyle='#304868'; ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillText('■ clean  ■ noisy+NL', pad, 10);
+}
 
-// Boot
-run();
+/* ================================================================
+   NOISE OVERLAY CANVAS
+   ================================================================ */
+function drawNoiseOverlay(ic_clean, ic_noisy) {
+  const c = document.getElementById('noise-overlay'); if(!c) return;
+  const W2=c.offsetWidth||600, H=160; c.width=W2; c.height=H;
+  const ctx=c.getContext('2d');
+  const bg = getComputedStyle(document.body).getPropertyValue('--s1').trim()||'#0a1120';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W2,H);
+  const pad=24;
+  const maxV = Math.max(...ic_clean, ...ic_noisy, 1e-12);
+  const bw = (W2-pad-4)/(CHANS*2.5);
+  CHAN_NAMES.forEach((_,i)=>{
+    const x0 = pad + i*(W2-pad-4)/CHANS + 4;
+    // clean
+    const hc = (ic_clean[i]/maxV)*(H-pad-12);
+    ctx.fillStyle=CHAN_HEX[i]; ctx.globalAlpha=.3;
+    ctx.fillRect(x0, H-pad-hc, 12, hc);
+    // noisy
+    const hn = Math.max(0,(ic_noisy[i]/maxV)*(H-pad-12));
+    ctx.globalAlpha=1; ctx.fillStyle=CHAN_HEX[i];
+    ctx.fillRect(x0+13, H-pad-hn, 8, hn);
+    // error bar
+    ctx.strokeStyle=CHAN_HEX[i]; ctx.lineWidth=1; ctx.globalAlpha=.7;
+    const yC = H-pad-hc, yN = H-pad-hn;
+    ctx.beginPath(); ctx.moveTo(x0+22,yC); ctx.lineTo(x0+22,yN); ctx.stroke();
+    ctx.globalAlpha=1; ctx.fillStyle=CHAN_HEX[i];
+    ctx.font='7px IBM Plex Mono,monospace'; ctx.textAlign='center';
+    ctx.fillText(`λ${i}`, x0+12, H-pad+10);
+  });
+  ctx.textAlign='left';
+  ctx.fillStyle='var(--t2)'; ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillText('□ clean  ■ noisy+NL  | error bars', pad, 10);
+}
+
+/* ================================================================
+   NOISE SWEEP
+   ================================================================ */
+async function runNoiseSweep() {
+  const c = document.getElementById('noise-sweep'); if(!c) return;
+  const W2=c.offsetWidth||400, H=180; c.width=W2; c.height=H;
+  const ctx=c.getContext('2d');
+  const bg = getComputedStyle(document.body).getPropertyValue('--s0').trim()||'#07090f';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W2,H);
+  ctx.fillStyle='#304868'; ctx.font='8px IBM Plex Mono,monospace';
+  ctx.fillText('Running Monte Carlo sweep…', 10, H/2);
+
+  const sigmas = Array.from({length:20}, (_,i)=>i*0.008);
+  const N_MC = 50;
+  const results = [];
+  for (const sigma of sigmas) {
+    let sumRmse = 0;
+    for (let k=0; k<N_MC; k++) {
+      const val = Math.floor(Math.random()*100000);
+      const r = compute(val, sigma, state.nl, state.W, state.Winv);
+      sumRmse += r.rmse;
+    }
+    results.push({ sigma, rmse: sumRmse/N_MC });
+    await new Promise(r=>setTimeout(r,0));
+  }
+
+  // Draw
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W2,H);
+  const pad=28;
+  const maxRmse = Math.max(...results.map(r=>r.rmse), 1);
+  // axes
+  ctx.strokeStyle='#182840'; ctx.lineWidth=.8;
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(W2-4,H-pad); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(pad,4); ctx.stroke();
+  ctx.fillStyle='#304868'; ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillText('σ →', W2-20, H-pad+8); ctx.fillText('RMSE', pad+2, 12);
+
+  const nls2 = ['none','sat','relu','sigmoid'];
+  const nlColors = ['#2288ff','#ff6622','#22cc66','#ffd022'];
+  nls2.forEach((nl,ni) => {
+    ctx.beginPath(); ctx.strokeStyle=nlColors[ni]; ctx.lineWidth=nl===state.nl?2.5:1;
+    ctx.globalAlpha=nl===state.nl?1:.4;
+    // quick local sweep
+    sigmas.forEach((sigma,si)=>{
+      let sum=0;
+      for(let k=0;k<20;k++){
+        const val=Math.floor(Math.random()*100000);
+        sum+=compute(val,sigma,nl,state.W,state.Winv).rmse;
+      }
+      const r=sum/20;
+      const px=pad+(sigma/0.152)*(W2-pad-8);
+      const py=H-pad-(r/maxRmse)*(H-pad-8);
+      si===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    });
+    ctx.stroke(); ctx.globalAlpha=1;
+    ctx.fillStyle=nlColors[ni]; ctx.font='6px IBM Plex Mono,monospace';
+    ctx.fillText(nl, W2-70, 14+ni*9);
+  });
+}
+
+/* ================================================================
+   SEQUENCE MODE
+   ================================================================ */
+function seqAddManual() {
+  const v = parseInt(document.getElementById('seq-add-val').value)||0;
+  state.sequence.push(v);
+  renderSeqTable();
+}
+function addToSeq() {
+  state.sequence.push(state.currentVal);
+  renderSeqTable();
+  showTab('seq');
+}
+function seqAddRandom() { state.sequence.push(Math.floor(Math.random()*100000)); renderSeqTable(); }
+function seqFibonacci() { state.sequence=[...state.sequence,1,1,2,3,5,8,13,21,34,55,89,144,233,377]; renderSeqTable(); }
+function seqPrimes() { state.sequence=[...state.sequence,2,3,5,7,11,13,17,19,23,29,31,37,41,43,47]; renderSeqTable(); }
+function seqClear() { state.sequence=[]; state.seqResults=[]; renderSeqTable(); renderSeqChart(); }
+
+function renderSeqTable() {
+  const tbl = document.getElementById('seq-table');
+  if (!state.sequence.length) { tbl.innerHTML='<div style="color:var(--t2);font-size:9px;font-family:var(--font-mono);padding:8px;">No values. Add inputs above.</div>'; return; }
+  tbl.innerHTML = `<div style="display:flex;gap:4px;flex-wrap:wrap;">${
+    state.sequence.map((v,i) => `<div class="seq-cell" onclick="seqLoad(${i})">${v}</div>`).join('')
+  }</div>`;
+}
+function seqLoad(i) { state.currentVal=state.sequence[i]; document.getElementById('dec-in').value=state.currentVal; run(); showTab('live'); }
+
+function runSequence() {
+  state.seqResults = state.sequence.map(val => {
+    const r = compute(val, state.noise, state.nl, state.W, state.Winv);
+    return { val, decoded:r.decoded, rmse:r.rmse, snr:r.snr, match:r.decoded===val };
+  });
+  renderSeqChart();
+  renderSeqSummary();
+}
+
+function renderSeqChart() {
+  const c = document.getElementById('seq-chart'); if(!c) return;
+  const W2=c.offsetWidth||600, H=180; c.width=W2; c.height=H;
+  const ctx=c.getContext('2d');
+  const bg = getComputedStyle(document.body).getPropertyValue('--s1').trim()||'#0a1120';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W2,H);
+  if (!state.seqResults.length) {
+    ctx.fillStyle='#304868'; ctx.font='9px IBM Plex Mono,monospace';
+    ctx.fillText('Click "Run All" to see results', 20, H/2); return;
+  }
+  const pad=30, n=state.seqResults.length;
+  const maxV = Math.max(...state.seqResults.map(r=>Math.max(r.val,r.decoded)), 1);
+  // Grid
+  ctx.strokeStyle='#0f1e35'; ctx.lineWidth=.5;
+  for(let y=pad;y<H-pad;y+=(H-2*pad)/4){ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W2-4,y);ctx.stroke();}
+  // Original
+  ctx.beginPath(); ctx.strokeStyle='var(--acc)'; ctx.lineWidth=1.5;
+  state.seqResults.forEach((r,i)=>{
+    const px=pad+i*(W2-pad-4)/(n-1||1), py=H-pad-(r.val/maxV)*(H-2*pad);
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  });
+  ctx.stroke();
+  // Decoded
+  ctx.beginPath(); ctx.strokeStyle='var(--acc2)'; ctx.lineWidth=1.5; ctx.setLineDash([3,2]);
+  state.seqResults.forEach((r,i)=>{
+    const px=pad+i*(W2-pad-4)/(n-1||1), py=H-pad-(r.decoded/maxV)*(H-2*pad);
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  });
+  ctx.stroke(); ctx.setLineDash([]);
+  // Error dots
+  state.seqResults.forEach((r,i)=>{
+    const px=pad+i*(W2-pad-4)/(n-1||1);
+    ctx.beginPath(); ctx.arc(px, H-pad-4, 3, 0, Math.PI*2);
+    ctx.fillStyle=r.match?'var(--ok)':'var(--err)'; ctx.fill();
+  });
+  ctx.fillStyle='var(--t2)'; ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillText('— input  -- decoded  • match/miss', pad, 10);
+}
+
+function renderSeqSummary() {
+  if (!state.seqResults.length) return;
+  const matches = state.seqResults.filter(r=>r.match).length;
+  const avgRmse = state.seqResults.reduce((s,r)=>s+r.rmse,0)/state.seqResults.length;
+  document.getElementById('seq-summary').innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <div class="mc"><div class="mc-v" style="color:var(--ok);">${matches}/${state.seqResults.length}</div><div class="mc-l">Exact matches</div></div>
+      <div class="mc"><div class="mc-v" style="color:${avgRmse<0.01?'var(--ok)':'var(--warn)'};">${avgRmse.toFixed(4)}</div><div class="mc-l">Mean RMSE</div></div>
+      <div class="mc"><div class="mc-v" style="color:var(--acc);">${(100*matches/state.seqResults.length).toFixed(1)}%</div><div class="mc-l">Accuracy</div></div>
+    </div>`;
+}
+
+/* ================================================================
+   BENCHMARK
+   ================================================================ */
+async function runBenchmark() {
+  const N  = parseInt(document.getElementById('bench-n')?.value)||200;
+  const maxVal = parseInt(document.getElementById('bench-max')?.value)||100000;
+  const sigma  = parseFloat(document.getElementById('bench-noise')?.value)||state.noise;
+  const nl     = document.getElementById('bench-nl')?.value||state.nl;
+  document.getElementById('mode-badge').className='mode-badge bench';
+  document.getElementById('mode-badge').textContent='BENCH';
+  document.getElementById('bench-status').textContent=`Running ${N} trials…`;
+  showTab('bench');
+
+  const data = [];
+  for (let i=0; i<N; i++) {
+    const val = Math.floor(Math.random()*maxVal);
+    const r = compute(val, sigma, nl, state.W, state.Winv);
+    data.push({ val, decoded:r.decoded, rmse:r.rmse, snr:r.snr, match:r.decoded===val });
+    if (i%50===0) {
+      document.getElementById('bench-status').textContent=`Progress: ${i}/${N}`;
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+
+  const matches = data.filter(d=>d.match).length;
+  const avgRmse = data.reduce((s,d)=>s+d.rmse,0)/N;
+  const maxRmse = Math.max(...data.map(d=>d.rmse));
+  const avgSnr  = data.filter(d=>isFinite(d.snr)).reduce((s,d)=>s+d.snr,0)/data.length;
+
+  document.getElementById('bench-metrics').innerHTML = [
+    {v:`${(100*matches/N).toFixed(1)}%`, l:'Accuracy', c:matches/N>.99?'var(--ok)':'var(--warn)'},
+    {v:matches+'/'+N, l:'Exact matches', c:'var(--acc)'},
+    {v:avgRmse.toFixed(4), l:'Mean RMSE', c:avgRmse<0.01?'var(--ok)':'var(--warn)'},
+    {v:maxRmse.toFixed(4), l:'Max RMSE', c:'var(--acc3)'},
+    {v:avgSnr.toFixed(1)+'dB', l:'Mean SNR', c:'var(--warn)'},
+    {v:N, l:'Trials', c:'var(--t1)'},
+    {v:sigma.toFixed(4), l:'σ noise', c:'var(--warn)'},
+    {v:nl, l:'Nonlinearity', c:'var(--t2)'},
+  ].map(m=>`<div class="mc"><div class="mc-v" style="font-size:14px;color:${m.c};">${m.v}</div><div class="mc-l">${m.l}</div></div>`).join('');
+
+  drawBenchHist(data);
+  drawBenchScatter(data);
+  document.getElementById('bench-status').textContent=`Done. ${N} trials | accuracy ${(100*matches/N).toFixed(1)}% | mean RMSE ${avgRmse.toFixed(4)}`;
+  document.getElementById('mode-badge').className='mode-badge live';
+  document.getElementById('mode-badge').textContent='LIVE';
+
+  // add to log
+  data.forEach(d => state.log.push({n:state.log.length+1,clk:state.clk,input:d.val,decoded:d.decoded,rmse:d.rmse,snr:d.snr,match:d.match,nl,sigma}));
+  renderLogCount();
+}
+
+function drawBenchHist(data) {
+  const c = document.getElementById('bench-hist'); if(!c) return;
+  const W2=c.offsetWidth||400, H=160; c.width=W2; c.height=H;
+  const ctx=c.getContext('2d');
+  const bg = getComputedStyle(document.body).getPropertyValue('--s1').trim()||'#0a1120';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W2,H);
+  const rmses = data.map(d=>d.rmse);
+  const maxR = Math.max(...rmses, 0.01);
+  const bins = 30;
+  const counts = new Array(bins).fill(0);
+  rmses.forEach(r => { const b=Math.min(bins-1,Math.floor(r/maxR*bins)); counts[b]++; });
+  const maxC = Math.max(...counts);
+  const pad=22, bw=(W2-pad-4)/bins;
+  counts.forEach((c2,i)=>{
+    const h=(c2/maxC)*(H-pad-8);
+    const t=i/bins;
+    ctx.fillStyle=`hsl(${120-t*120},80%,55%)`;
+    ctx.fillRect(pad+i*bw+1,H-pad-h,bw-2,h);
+  });
+  ctx.strokeStyle='#182840'; ctx.lineWidth=.5;
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(W2-4,H-pad); ctx.stroke();
+  ctx.fillStyle='#304868'; ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillText('RMSE distribution (histogram)', pad, 10);
+  ctx.fillText('0', pad, H-pad+8); ctx.fillText(maxR.toFixed(3), W2-40, H-pad+8);
+}
+
+function drawBenchScatter(data) {
+  const c = document.getElementById('bench-scatter'); if(!c) return;
+  const W2=c.offsetWidth||400, H=200; c.width=W2; c.height=H;
+  const ctx=c.getContext('2d');
+  const bg = getComputedStyle(document.body).getPropertyValue('--s1').trim()||'#0a1120';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W2,H);
+  const pad=28;
+  const maxV=Math.max(...data.map(d=>d.val),1), maxR=Math.max(...data.map(d=>d.rmse),0.001);
+  data.forEach(d=>{
+    const px=pad+(d.val/maxV)*(W2-pad-4);
+    const py=H-pad-(d.rmse/maxR)*(H-pad-8);
+    ctx.beginPath(); ctx.arc(px,py,2.5,0,Math.PI*2);
+    ctx.fillStyle=d.match?'rgba(0,212,138,.6)':'rgba(255,62,90,.7)'; ctx.fill();
+  });
+  ctx.strokeStyle='#182840'; ctx.lineWidth=.5;
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(W2-4,H-pad); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(pad,4); ctx.stroke();
+  ctx.fillStyle='#304868'; ctx.font='7px IBM Plex Mono,monospace';
+  ctx.fillText('input value →', W2-70, H-pad+10);
+  ctx.fillText('RMSE ↑', pad+2, 12);
+  ctx.fillStyle='rgba(0,212,138,.8)'; ctx.fillRect(pad,16,8,5); ctx.fillText('match', pad+10, 21);
+  ctx.fillStyle='rgba(255,62,90,.8)'; ctx.fillRect(pad+50,16,8,5); ctx.fillText('mismatch', pad+60, 21);
+}
+
+/* ================================================================
+   LOG
+   ================================================================ */
+function renderLogCount() {
+  const n = state.log.length;
+  document.getElementById('log-count').textContent = `(${n})`;
+  document.getElementById('log-info').textContent = `${n} entries`;
+}
+function renderLogFull() {
+  const tbody = document.getElementById('log-body');
+  const recent = state.log.slice(-200).reverse();
+  tbody.innerHTML = recent.map(e => {
+    const cls = e.match ? 'good' : e.rmse < 1 ? 'mid' : 'bad';
+    return `<tr>
+      <td>${e.n}</td><td>${e.clk}</td>
+      <td>${e.input.toLocaleString()}</td>
+      <td>${e.decoded.toLocaleString()}</td>
+      <td class="${e.rmse<0.01?'good':e.rmse<1?'mid':'bad'}">${e.rmse.toFixed(5)}</td>
+      <td class="${e.snr>30?'good':e.snr>10?'mid':'bad'}">${isFinite(e.snr)?e.snr.toFixed(1):'∞'}</td>
+      <td class="${cls}">${e.match?'✓':'✗'}</td>
+      <td>${e.nl}</td>
+      <td>${e.sigma.toFixed(4)}</td>
+    </tr>`;
+  }).join('');
+}
+function clearLog() { state.log=[]; renderLogCount(); document.getElementById('log-body').innerHTML=''; }
+function exportLog() {
+  const header='n,clk,input,decoded,rmse,snr,match,nl,sigma\n';
+  const rows=state.log.map(e=>`${e.n},${e.clk},${e.input},${e.decoded},${e.rmse.toFixed(6)},${isFinite(e.snr)?e.snr.toFixed(2):999},${e.match?1:0},${e.nl},${e.sigma}`).join('\n');
+  const blob=new Blob([header+rows],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='owcu-log.csv'; a.click();
+}
+
+/* ================================================================
+   TABS
+   ================================================================ */
+function showTab(id) {
+  ['live','matrix','noise','seq','bench','log'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = t===id?'flex':'none';
+    document.getElementById('t-'+t).classList.toggle('active',t===id);
+  });
+  if (id==='matrix') renderMatrixTab(lastResult||{x:state.xVec,y:state.yVec,x_hat_f:state.xhat,ic_clean:state.pt.map(p=>p.ic),ic_noisy:state.pt.map(p=>p.ic)});
+  if (id==='noise') renderNoiseTab(lastResult||{ic_clean:state.pt.map(p=>p.ic),ic_noisy:state.pt.map(p=>p.ic),snr:Infinity});
+  if (id==='log') renderLogFull();
+  if (id==='seq') renderSeqTable();
+}
+// All tab divs need display:flex direction:column
+document.querySelectorAll('.main').forEach(m=>m.style.flexDirection='column');
+
+/* ================================================================
+   PAPER MODE
+   ================================================================ */
+function togglePaper() {
+  document.body.classList.toggle('paper');
+  document.getElementById('paper-btn').textContent = document.body.classList.contains('paper') ? '◑ Dark' : '◑ Paper';
+  setTimeout(()=>run(),50);
+}
+
+/* ================================================================
+   CLK UPDATE
+   ================================================================ */
+function updateClk(snr) {
+  const snrStr = isFinite(snr) ? snr.toFixed(1)+'dB' : '∞';
+  document.getElementById('clk-txt').textContent = `CLK ${state.clk} | SNR ${snrStr} | det ${(state.det||0).toExponential(2)}`;
+}
+
+/* ================================================================
+   RESIZE
+   ================================================================ */
+let resizeTimer;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(()=>{ if(lastResult) run(); }, 100);
+});
+
+/* ================================================================
+   LAST RESULT CACHE (for tab redraws)
+   ================================================================ */
+let lastResult = null;
+const _run = run;
+// Wrap run to cache result
+(function(){
+  const origRun = run;
+  window.run = function() {
+    const val=state.currentVal, sigma=state.noise, nl=state.nl;
+    const result=compute(val,sigma,nl,state.W,state.Winv);
+    state.xVec=result.x; state.yVec=result.y; state.xhat=result.x_hat;
+    state.pt=result.pt; state.clk++;
+    lastResult=result;
+    const match=result.decoded===val;
+    const entry={n:state.log.length+1,clk:state.clk,input:val,decoded:result.decoded,rmse:result.rmse,snr:isFinite(result.snr)?result.snr:999,match,nl,sigma};
+    state.log.push(entry);
+    if(state.log.length>1000)state.log.shift();
+    updateClk(result.snr);
+    renderAllLive(result);
+    renderMatrixTab(result);
+    renderNoiseTab(result);
+    renderLogCount();
+  };
+})();
+
+/* ================================================================
+   BOOT
+   ================================================================ */
+newMatrix(); // generates W + Winv + runs
 </script>
 </body>
 </html>
